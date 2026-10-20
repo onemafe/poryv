@@ -463,6 +463,19 @@ const LEVELS = [
             { type: 'corner', x: 2, y: 7, rot: 0 }, { type: 'hut', x: 8, y: 3, rot: 0 }],
     inv: { chimney: 1, hut: 1, wattle: 1, tree: 2, rotunda: 1 },
     solution: [{ type: 'chimney', x: 6, y: 0, rot: 3 }, { type: 'hut', x: 9, y: 2, rot: 0 }, { type: 'wattle', x: 2, y: 3, rot: 0 }, { type: 'tree', x: 4, y: 6, rot: 2 }, { type: 'tree', x: 3, y: 6, rot: 1 }, { type: 'rotunda', x: 6, y: 2, rot: 3 }] },
+  // переменный ветер — тип уровня, а не режим: может встретиться в любой главе
+  { name: 'Сквозняк', chapter: 'Город · черновик', wind: 17, dir: [1, 0], duration: 10, shift: { at: 4.5, dir: [0, 1] },
+    hint: 'Ветер повернёт с запада на север. Угловой дом прикрывает с двух сторон, но сам держит только 16 м/с.',
+    intro: [['keeper', 'В городе ветер крутит между домами: сейчас с запада, через 4.5 секунды — с севера. Угловой дом прикроет хижину с двух сторон. Только не ставь его под самый удар — он держит 16.']],
+    fixed: [{ type: 'hut', x: 6, y: 6, rot: 0 }, { type: 'rock', x: 2, y: 1, rot: 0 }, { type: 'tree', x: 1, y: 8, rot: 0 }],
+    inv: { corner: 1 },
+    solution: [{ type: 'corner', x: 4, y: 4, rot: 1 }] },
+  { name: 'Шлюз', chapter: 'Режимы · черновик', mode: 'Управление', wind: 25, dir: [1, 0], duration: 10, shift: { at: 4.5, dir: [-1, 0] }, mods: { gateBudget: 7 },
+    hint: 'Нажимай на ворота во время ветра. Пока дует с запада — закрой. Ветер повернёт — открой: закрытыми они держатся только 7 с.',
+    intro: [['keeper', 'Ворота — шлюз. Пока ветер с запада, закрой их, иначе хижину сдует. Через 4.5 секунды ветер повернёт с востока — тогда открывай: закрытыми механизм держится только 7 секунд, потом заклинит.']],
+    fixed: [{ type: 'gate', x: 3, y: 3, rot: 0 }, { type: 'gate', x: 3, y: 4, rot: 0 }, { type: 'gate', x: 3, y: 5, rot: 0 }, { type: 'hut', x: 5, y: 4, rot: 0 },
+            { type: 'fence', x: 7, y: 3, rot: 1 }, { type: 'rock', x: 0, y: 1, rot: 0 }, { type: 'tree', x: 1, y: 8, rot: 0 }],
+    inv: {}, gatePlan: [[0.8, 5.8]] },
   { name: 'Снежный перевал', chapter: 'Режимы · черновик', mode: 'Занос', wind: 12, dir: [1, 0], duration: 10, mods: { drift: 'snow' },
     hint: 'Снег оседает там, где ветер стихает. Дорога и дома не должны утонуть в сугробах.',
     roads: [[[6, 0], [6, 9]]],
@@ -515,7 +528,7 @@ const ARCHIVE = [
     fixed: [{ type: 'hut', x: 3, y: 2, rot: 0 }, { type: 'hut', x: 6, y: 6, rot: 0 }, { type: 'hut', x: 2, y: 7, rot: 0 }],
     inv: { hut: 4, house: 1 },
     solution: [{ type: 'hut', x: 7, y: 5, rot: 0 }, { type: 'hut', x: 2, y: 2, rot: 3 }, { type: 'hut', x: 7, y: 9, rot: 2 }, { type: 'hut', x: 2, y: 8, rot: 2 }, { type: 'house', x: 5, y: 8, rot: 2 }] },
-  { name: 'Шлюз', mode: 'Управление', wind: 13, dir: [1, 0], duration: 10.5, mods: { gateBudget: 5.4 },
+  { name: 'Шлюз · порывы', mode: 'Управление', wind: 13, dir: [1, 0], duration: 10.5, mods: { gateBudget: 5.4 },
     gusts: [[2, 3.3, 1.7], [5, 6.6, 1.7], [8.2, 9.4, 1.7]],
     hint: 'Во время прогона нажимай на ворота, чтобы закрыть или открыть. Закрывай под порывы (оранжевые на шкале), но механизм выдерживает только 5.4 с закрытым.',
     terrain: ['0003000000', '0003000000', '0003000000', '0003000000', '0000000000', '0003000000', '0003000000', '0003000000', '0003000000', '0003000000'],
@@ -931,6 +944,7 @@ function evaluate(world) {
   for (const pc of world.pieces) {
     const T = TYPES[pc.type];
     if (T.kind === 'loose' && pc.peak > T.lift * K) score += 0.2 * (pc.peak - T.lift * K);
+    if (T.kind === 'gate' && pc.jammed && M.gateBudget && !fails.some(f => f.kind === 'jam')) { fails.push({ kind: 'jam', pc, text: 'ворота заклинило — держал закрытыми слишком долго' }); score += 3; }
     if (!T.limit) continue;
     if (pc.broken) fails.push({ kind: 'broken', pc, text: pc.brokeBy === 'tent' ? `${T.name}: снесло палаткой` : `${T.name}: сдуло` });
     if (!pc.broken) score += Math.max(0, pc.peak - limitOf(world, pc) * K);
@@ -1216,7 +1230,7 @@ function updateUI() {
       : (!st.sandbox && invLeft() > 0 ? 'Перетащи фигуру снизу на поле. Тап по своей постройке — повернуть.' : 'Всё расставлено. Жми «Ветер!»');
   }
   if (!text && st.phase === 'run' && world.pieces.some(p => TYPES[p.type].kind === 'gate'))
-    text = st.autoGate ? 'Ворота работают по решению. Нажми на них, чтобы перехватить управление.' : 'Нажимай на ворота: закрыть под порыв, открыть после. Пробел — то же.';
+    text = st.autoGate ? 'Ворота работают по решению. Нажми на них, чтобы перехватить управление.' : 'Нажми на ворота, чтобы закрыть или открыть. Пробел — то же.';
   if (text) {
     const sp = document.createElement('span');
     if (typeof text === 'object') {
@@ -1333,7 +1347,8 @@ cv.addEventListener('pointerdown', e => {
   if (e.button === 2) return;
   const [sx, sy] = local(e);
   const hit = pieceAtScreen(sx, sy);
-  if (st.phase === 'run' && hit && TYPES[hit.type].kind === 'gate') { st.autoGate = null; toggleGate(hit); st.drag = null; return; }
+  // ворота — один механизм: тап по любой створке переключает все
+  if (st.phase === 'run' && hit && TYPES[hit.type].kind === 'gate') { st.autoGate = null; world.pieces.filter(p => TYPES[p.type].kind === 'gate').forEach(toggleGate); st.drag = null; return; }
   const [cx, cy] = cellAt(e);
   const touch = e.pointerType === 'touch';
   if (st.phase === 'build' && hit && !hit.fixed && !st.sel) {
