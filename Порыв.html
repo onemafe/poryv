@@ -184,6 +184,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
         <button class="btn icon" id="camR" title="Камера вправо (E)" aria-label="Повернуть камеру вправо">⟳</button>
         <button class="btn icon" id="camHome" title="Вид по умолчанию" aria-label="Вид по умолчанию">⌂</button>
         <span class="sep" aria-hidden="true"></span>
+        <button class="btn" id="hintBtn" title="Поставить одну фигуру на её место">💡<span class="tx"> Подсказка</span></button>
         <button class="btn" id="gear" aria-pressed="false" title="Слои, режим разрушения, расчёт">⚙<span class="tx"> Настройки</span></button>
         <button class="btn go" id="go">Ветер!</button>
       </div>
@@ -400,6 +401,13 @@ const LEVELS = [
     fixed: [{ type: 'hut', x: 5, y: 6, rot: 0 }, { type: 'fence', x: 3, y: 5, rot: 1 }, { type: 'tree', x: 8, y: 2, rot: 0 }],
     inv: { fence: 1 },
     solution: [{ type: 'fence', x: 4, y: 4, rot: 0 }] },
+  { name: 'Переменчивый ветер', chapter: 'Деревня', wind: 20, dir: [1, 0], duration: 10, shift: { at: 4.5, dir: [0, 1] },
+    hint: 'Ветер повернёт: жёлтые стрелки — сначала, синие — через 4.5 с. Прикрой хижину с обеих сторон.',
+    intro: [['keeper', 'Барометр скачет: сейчас дует с запада, а через 4.5 секунды повернёт — видишь синие стрелки? С запада хижину забор уже прикрывает.'], ['ilya', 'А с другой стороны — голая стена…']],
+    outro: [['ilya', 'Ишь, крутит! А хата стоит.']],
+    fixed: [{ type: 'hut', x: 6, y: 6, rot: 0 }, { type: 'fence', x: 4, y: 5, rot: 1 }, { type: 'rock', x: 1, y: 2, rot: 0 }, { type: 'tree', x: 8, y: 1, rot: 0 }],
+    inv: { fence: 1 },
+    solution: [{ type: 'fence', x: 5, y: 4, rot: 0 }] },
   { name: 'Плетень', chapter: 'Деревня', wind: 21, dir: [1, 0],
     hint: 'У концов забора ветер разгоняется. Плетень пропускает ветер насквозь и не ломается.',
     intro: [['ilya', 'У концов забора ветер злее, крутит. А плетень сквозь себя пропускает — оттого и не крутит. Сплёл тебе один.']],
@@ -1176,6 +1184,7 @@ function updateUI() {
   updateExtra();
   $('#sandbox').hidden = !st.sandbox;
   $('#sol').hidden = st.sandbox;
+  $('#hintBtn').hidden = !hintable(); $('#hintBtn').disabled = st.phase !== 'build';
   $('#go').disabled = st.phase === 'run';
   const canStash = st.phase === 'build' && st.picked && world.pieces.includes(st.picked);
   $('#stash').hidden = !canStash;
@@ -1477,6 +1486,61 @@ $('#sol').onclick = () => {
   $('#settings').hidden = true; $('#gear').setAttribute('aria-pressed', false);
   updateUI();
 };
+// подсказка: одна фигура из проверенного решения встаёт на своё место, мешающие уходят в запас
+// (позже — за рекламу, через platform/)
+const sameSpot = (a, b) => a.type === b.type && (TYPES[a.type].kind !== 'wedge' || a.rot % 4 === b.rot % 4)
+  && String(pieceCells(a).sort()) === String(pieceCells(b).sort());
+function hintable() { const L = LEVELS[st.level]; return !st.sandbox && !st.tut && ((L.solution || []).length > 0 || !!L.gatePlan); }
+function giveHint() {
+  if (!hintable() || st.phase !== 'build') return;
+  const L = LEVELS[st.level];
+  st.sel = null; st.picked = null; st.introDone = true;
+  if (!(L.solution || []).length) {
+    st.autoGate = L.gatePlan;
+    st.msg = 'Подсказка: ворота закроются сами по проверенному расписанию. Жми «Ветер!».'; updateUI(); return;
+  }
+  // какие фигуры игрока уже стоят по решению и какая из решения — следующая
+  const mine = world.pieces.filter(p => !p.fixed), ok = new Set();
+  let next = null;
+  for (const s of L.solution) {
+    const m = mine.find(p => !ok.has(p) && sameSpot(p, s));
+    if (m) ok.add(m); else if (!next) next = s;
+  }
+  if (!next) { st.msg = 'Все фигуры уже на своих местах. Жми «Ветер!»'; updateUI(); return; }
+  let moved = 0;
+  const wrong = () => world.pieces.filter(p => !p.fixed && !ok.has(p));
+  const toStash = pc => { world.pieces.splice(world.pieces.indexOf(pc), 1); returnToStash(pc); moved++; };
+  const cells = new Set(pieceCells(next).map(String));
+  for (const p of wrong()) if (pieceCells(p).some(c => cells.has(String(c)))) toStash(p);
+  if (shopOf()) {
+    // бревно: вернуть лишнюю фигуру или срубить дерево, которое рубят в решении
+    const cuts = L.solutionCuts || [], isCut = (x, y) => cuts.some(c => c[0] === x && c[1] === y);
+    const getLog = () => {
+      const w = wrong()[0];
+      if (w) { toStash(w); return true; }
+      const t = world.pieces.find(p => p.cut && isCut(p.x, p.y));
+      if (!t) return false;
+      world.pieces.splice(world.pieces.indexOf(t), 1); st.stumps.push([t.x, t.y]); st.logs++; return true;
+    };
+    // деревья, срубленные зря, сажаем обратно
+    for (const [x, y] of st.stumps.filter(([x, y]) => !isCut(x, y))) {
+      while (st.logs < 1 && getLog());
+      if (st.logs < 1 || pieceAt(x, y)) continue;
+      st.stumps.splice(st.stumps.findIndex(s => s[0] === x && s[1] === y), 1); st.logs--;
+      world.pieces.push({ type: 'tree', x, y, rot: 0, fixed: true, cut: true, broken: false, load: 0, hp: 1 });
+    }
+    while (st.logs < costOf(next.type) && getLog());
+  } else if (!(st.inv[next.type] > 0)) {
+    const w = wrong().find(p => p.type === next.type);
+    if (w) toStash(w);
+  }
+  if (placeAt(next.type, next.x, next.y, next.rot)) {
+    st.picked = world.pieces[world.pieces.length - 1];
+    st.msg = `Подсказка: ${TYPES[next.type].name.toLowerCase()} — на своём месте.` + (moved ? ' Мешавшие фигуры вернулись в запас.' : '');
+  } else rebuild(world);
+  updateUI();
+}
+$('#hintBtn').onclick = giveHint;
 $('#camL').onclick = () => turnCam(-1);
 $('#camR').onclick = () => turnCam(1);
 $('#camHome').onclick = () => { cam.target = 0; cam.zoom = 1; cam.px = 0; cam.py = 0; };
@@ -1758,9 +1822,10 @@ function drawArrows() {
     ctx.stroke(); ctx.globalAlpha = 1;
   }
 }
-function drawInflow(time) {
-  const d = world.dir, n = BOARD;
-  ctx.strokeStyle = colors.accent; ctx.lineWidth = Math.max(1.5, view.tw / 18); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+const SHIFT_COLOR = '#3d7fb8';
+function drawInflow(time, d, color, alpha, label) {
+  const n = BOARD;
+  ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, view.tw / 18); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   for (let i = 0; i < n; i++) {
     const ph = ((time * 0.9 + i * 0.13) % 1);
     let cx, cy;
@@ -1769,8 +1834,19 @@ function drawInflow(time) {
     else if (d[1] > 0) { cx = i + 0.5; cy = off; } else { cx = i + 0.5; cy = n - off; }
     const px = -d[1], py = d[0], s = 0.17;
     const tip = P(cx + d[0] * s, cy + d[1] * s, 0), l = P(cx - d[0] * s + px * s, cy - d[1] * s + py * s, 0), r = P(cx - d[0] * s - px * s, cy - d[1] * s - py * s, 0);
-    ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.9;
+    ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.9 * alpha;
     ctx.beginPath(); ctx.moveTo(l[0], l[1]); ctx.lineTo(tip[0], tip[1]); ctx.lineTo(r[0], r[1]); ctx.stroke();
+  }
+  if (label) { // подпись ряда стрелок снаружи поля
+    const e = -1.45, [lx, ly] = d[0] > 0 ? [e, n / 2] : d[0] < 0 ? [n - e, n / 2] : d[1] > 0 ? [n / 2, e] : [n / 2, n - e];
+    const [sx, sy] = P(lx, ly, 0);
+    ctx.globalAlpha = Math.max(0.5, alpha);
+    ctx.font = `600 11px ${getComputedStyle(document.body).getPropertyValue('--f-body')}`; ctx.textAlign = 'center';
+    const w = ctx.measureText(label).width + 12;
+    ctx.fillStyle = color; ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(sx - w / 2, sy - 9, w, 18, 9); else ctx.rect(sx - w / 2, sy - 9, w, 18); // старый Safari
+    ctx.fill();
+    ctx.fillStyle = color === SHIFT_COLOR ? '#fff' : colors.accentInk || '#1c1600'; ctx.fillText(label, sx, sy + 4);
   }
   ctx.globalAlpha = 1;
 }
@@ -2255,7 +2331,12 @@ function frame(now) {
   drawBoard();
   if (flowOn && st.layers.heat) drawHeat();
   drawGrid();
-  if (flowOn) drawInflow(clock);
+  if (flowOn && world.shift) {
+    // смена ветра: оба ряда стрелок видны заранее; активный — ярче
+    const t = st.phase === 'run' ? world.t : st.phase === 'build' ? clock % world.duration : world.duration, after = t >= world.shift.at;
+    drawInflow(clock, world.baseDir, colors.accent, after ? 0.3 : 1, 'сначала');
+    drawInflow(clock, world.shift.dir, SHIFT_COLOR, after ? 1 : 0.55, `через ${world.shift.at} с`);
+  } else if (flowOn) drawInflow(clock, world.dir, colors.accent, 1);
   if (flowOn && st.layers.streak) drawStreaks();
   if (flowOn && st.layers.arrow) drawArrows();
   if ((world.mods.drift) && (flowOn || st.phase === 'result')) drawScalar();
