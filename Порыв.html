@@ -366,22 +366,73 @@ function rotCells(cells, rot) {
 function pieceCells(pc) { return rotCells(TYPES[pc.type].cells, pc.rot).map(([x, y]) => [x + pc.x, y + pc.y]); }
 
 const LEVELS = [
-  { name: 'Первый порыв', wind: 21, dir: [1, 0],
+  { name: 'Первый порыв', chapter: 'Деревня', wind: 21, dir: [1, 0],
     hint: 'Хижина стоит на открытом месте. Прикрой её от ветра.', tutorial: true,
     fixed: [{ type: 'hut', x: 6, y: 5, rot: 0 }, { type: 'rock', x: 2, y: 1, rot: 0 }, { type: 'rock', x: 2, y: 8, rot: 0 }],
     inv: { fence: 1 },
     solution: [{ type: 'fence', x: 4, y: 4, rot: 3 }] },
-  { name: 'Переулок', wind: 18, dir: [0, 1],
+  // --- 2–8: глава «Деревня» (проверены симуляцией: решение проходит, пустое поле — нет) ---
+  { name: 'Сад', chapter: 'Деревня', wind: 22, dir: [1, 0],
+    hint: 'Деревья гасят ветер. За яблонями уже тихо — прикрой и вторую хижину.',
+    intro: [['masha', 'Видишь, за моими яблонями тихо? А вторая хата голая стоит. Посади пару деревьев, а?']],
+    outro: [['masha', 'Вот теперь и вторая в тени. Спасибо!']],
+    fixed: [{ type: 'hut', x: 6, y: 3, rot: 0 }, { type: 'hut', x: 6, y: 7, rot: 0 }, { type: 'tree', x: 5, y: 7, rot: 0 }, { type: 'tree', x: 4, y: 7, rot: 0 }, { type: 'rock', x: 1, y: 5, rot: 0 }],
+    inv: { tree: 2 },
+    solution: [{ type: 'tree', x: 5, y: 3, rot: 0 }, { type: 'tree', x: 4, y: 3, rot: 0 }] },
+  { name: 'Новый дом', chapter: 'Деревня', wind: 22, dir: [1, 0],
+    hint: 'Поставь хижину туда, где тихо: синее на поле — слабый ветер.',
+    intro: [['stepa', 'Хочу дом поставить. Где тут у вас потише?'], ['keeper', 'Смотри на цвета: синее — тихо, красное — дует.']],
+    outro: [['stepa', 'Тут и построюсь. Спасибо!']],
+    fixed: [{ type: 'fence', x: 3, y: 3, rot: 1 }, { type: 'tree', x: 2, y: 7, rot: 0 }, { type: 'tree', x: 3, y: 7, rot: 0 }, { type: 'rock', x: 6, y: 8, rot: 0 }],
+    inv: { hut: 1 },
+    solution: [{ type: 'hut', x: 5, y: 4, rot: 0 }] },
+  { name: 'Соседки', chapter: 'Деревня', wind: 22, dir: [1, 0],
+    hint: 'Забор один, хижины две. Поставь его так, чтобы прикрыл обе.',
+    intro: [['nyura', 'Забор мне!'], ['zina', 'Нет, мне!'], ['keeper', 'Забор один. Поставь так, чтобы обеим хватило.']],
+    outro: [['zina', 'Ладно, Нюра, мир.']],
+    fixed: [{ type: 'hut', x: 6, y: 4, rot: 0 }, { type: 'hut', x: 6, y: 6, rot: 0 }, { type: 'rock', x: 1, y: 1, rot: 0 }, { type: 'tree', x: 8, y: 9, rot: 0 }],
+    inv: { fence: 1 },
+    solution: [{ type: 'fence', x: 4, y: 4, rot: 1 }] },
+  { name: 'Ветер с реки', chapter: 'Деревня', wind: 22, dir: [0, 1],
+    hint: 'Ветер дует с другой стороны — смотри на жёлтые стрелки.',
+    intro: [['stepa', 'Я ж забор с запада поставил… а дует с реки!'], ['keeper', 'Глянь на жёлтые стрелки — ветер не всегда с одной стороны.']],
+    outro: [['stepa', 'Буду теперь на стрелки смотреть.']],
+    fixed: [{ type: 'hut', x: 5, y: 6, rot: 0 }, { type: 'fence', x: 3, y: 5, rot: 1 }, { type: 'tree', x: 8, y: 2, rot: 0 }],
+    inv: { fence: 1 },
+    solution: [{ type: 'fence', x: 4, y: 4, rot: 0 }] },
+  { name: 'Плетень', chapter: 'Деревня', wind: 21, dir: [1, 0],
+    hint: 'У концов забора ветер разгоняется. Плетень пропускает ветер насквозь и не ломается.',
+    intro: [['ilya', 'У концов забора ветер злее, крутит. А плетень сквозь себя пропускает — оттого и не крутит. Сплёл тебе один.']],
+    outro: [['ilya', 'Говорил же — плетень не подведёт.']],
+    fixed: [{ type: 'fence', x: 3, y: 2, rot: 1 }, { type: 'hut', x: 5, y: 3, rot: 0 }, { type: 'hut', x: 6, y: 6, rot: 0 }],
+    inv: { wattle: 1 },
+    solution: [{ type: 'wattle', x: 2, y: 5, rot: 1 }] },
+  { name: 'Крепкий сосед', chapter: 'Деревня', wind: 22, dir: [1, 0],
+    hint: 'За кузней хижинам тихо, но сама кузня держит только 15 м/с. Прикрой её.',
+    intro: [['fyodor', 'Кузня у меня крепкая, за ней всей улице тихо. Но больше 15 и она не выдержит.'], ['keeper', 'Прикроешь кузню — она прикроет остальных.']],
+    outro: [['fyodor', 'Устояла кузня — устояла и улица.']],
+    fixed: [{ type: 'house', x: 2, y: 4, rot: 1 }, { type: 'hut', x: 4, y: 4, rot: 0 }, { type: 'hut', x: 6, y: 5, rot: 0 }],
+    inv: { tree: 2 },
+    solution: [{ type: 'tree', x: 1, y: 4, rot: 0 }, { type: 'tree', x: 1, y: 5, rot: 0 }] },
+  { name: 'Перед бурей', chapter: 'Деревня', wind: 22, dir: [1, 0],
+    hint: 'Три хижины и кузня. Фигуры влияют друг на друга — пробуй.',
+    intro: [['keeper', 'Шторм крепчает. Теперь сам: плетень, забор, дерево. Три хижины и кузня.']],
+    outro: [['keeper', 'Деревня цела. Но шторм уходит к городу — нам туда.']],
+    fixed: [{ type: 'house', x: 3, y: 4, rot: 1 }, { type: 'hut', x: 5, y: 4, rot: 0 }, { type: 'hut', x: 7, y: 7, rot: 0 }, { type: 'hut', x: 7, y: 2, rot: 0 }, { type: 'rock', x: 1, y: 8, rot: 0 }, { type: 'tree', x: 9, y: 5, rot: 0 }],
+    inv: { fence: 1, wattle: 1, tree: 1 },
+    solution: [{ type: 'wattle', x: 0, y: 3, rot: 1 }, { type: 'fence', x: 6, y: 6, rot: 1 }, { type: 'tree', x: 6, y: 2, rot: 0 }] },
+  // --- черновик главы «Город» (старые уровни 2–6) ---
+  { name: 'Переулок', chapter: 'Город · черновик', wind: 18, dir: [0, 1],
     hint: 'Ветер с другой стороны. Высотка уже стоит — используй её тень.',
     fixed: [{ type: 'house', x: 4, y: 6, rot: 0 }, { type: 'slab', x: 6, y: 3, rot: 1 }, { type: 'rock', x: 1, y: 2, rot: 0 }, { type: 'rock', x: 8, y: 1, rot: 0 }],
     inv: { hut: 1, corner: 1, tower: 1, tree: 1 },
     solution: [{ type: 'hut', x: 0, y: 5, rot: 1 }, { type: 'corner', x: 7, y: 6, rot: 0 }, { type: 'tower', x: 5, y: 3, rot: 0 }, { type: 'tree', x: 4, y: 3, rot: 3 }] },
-  { name: 'Квартал у моря', wind: 23, dir: [-1, 0],
+  { name: 'Квартал у моря', chapter: 'Город · черновик', wind: 23, dir: [-1, 0],
     hint: 'Сильный ветер с моря. Много построек, мало укрытий.',
     fixed: [{ type: 'hut', x: 2, y: 2, rot: 0 }, { type: 'hut', x: 2, y: 7, rot: 0 }, { type: 'house', x: 4, y: 4, rot: 1 }],
     inv: { slab: 1, tower: 1, fence: 1, mill: 1, house: 1, tree: 2 },
     solution: [{ type: 'slab', x: 5, y: 6, rot: 3 }, { type: 'tower', x: 2, y: 6, rot: 0 }, { type: 'fence', x: 8, y: 2, rot: 1 }, { type: 'mill', x: 9, y: 5, rot: 2 }, { type: 'house', x: 6, y: 5, rot: 2 }, { type: 'tree', x: 8, y: 9, rot: 2 }, { type: 'tree', x: 6, y: 9, rot: 3 }] },
-  { name: 'Перекрёсток', wind: 18, dir: [1, 0],
+  { name: 'Перекрёсток', chapter: 'Город · черновик', wind: 18, dir: [1, 0],
     hint: 'Плотный квартал и две дороги. Строить на дорогах нельзя.',
     roads: [[[0, 4], [9, 4]], [[5, 0], [5, 9]]],
     fixed: [{ type: 'hut', x: 1, y: 1, rot: 0 }, { type: 'house', x: 3, y: 0, rot: 0 }, { type: 'corner', x: 7, y: 1, rot: 0 },
@@ -389,7 +440,7 @@ const LEVELS = [
             { type: 'slab', x: 7, y: 6, rot: 1 }, { type: 'hut', x: 9, y: 8, rot: 0 }],
     inv: { arch: 1, wattle: 2, rotunda: 1, tree: 2 },
     solution: [{ type: 'arch', x: 2, y: 7, rot: 1 }, { type: 'wattle', x: 4, y: 1, rot: 1 }, { type: 'wattle', x: 6, y: 7, rot: 3 }, { type: 'rotunda', x: 3, y: 5, rot: 2 }, { type: 'tree', x: 0, y: 2, rot: 3 }, { type: 'tree', x: 0, y: 1, rot: 0 }] },
-  { name: 'Набережная', wind: 18, dir: [-1, 0],
+  { name: 'Набережная', chapter: 'Город · черновик', wind: 18, dir: [-1, 0],
     hint: 'Шторм с воды. Домики на набережной открыты всем ветрам.',
     roads: [[[7, 0], [7, 9]], [[0, 6], [6, 6]]],
     fixed: [{ type: 'hut', x: 8, y: 2, rot: 0 }, { type: 'hut', x: 8, y: 7, rot: 0 }, { type: 'house', x: 4, y: 1, rot: 0 },
@@ -397,28 +448,27 @@ const LEVELS = [
             { type: 'hut', x: 4, y: 8, rot: 0 }],
     inv: { wedge: 1, arch: 1, wattle: 2, rotunda: 1, slab: 1, tree: 2 },
     solution: [{ type: 'wedge', x: 5, y: 2, rot: 0 }, { type: 'arch', x: 0, y: 3, rot: 1 }, { type: 'wattle', x: 5, y: 7, rot: 1 }, { type: 'wattle', x: 9, y: 5, rot: 3 }, { type: 'rotunda', x: 2, y: 0, rot: 2 }, { type: 'slab', x: 3, y: 4, rot: 2 }, { type: 'tree', x: 6, y: 0, rot: 2 }, { type: 'tree', x: 6, y: 4, rot: 0 }] },
-  { name: 'Котельная', wind: 20, dir: [1, 0],
+  { name: 'Котельная', chapter: 'Город · черновик', wind: 20, dir: [1, 0],
     hint: 'Труба котельной срывает вихри: в 2–4 клетках за ней след виляет и бьёт порывами. Твою трубу тоже нужно где-то поставить.',
     roads: [[[0, 5], [9, 5]]],
     fixed: [{ type: 'chimney', x: 1, y: 2, rot: 0 }, { type: 'hut', x: 4, y: 2, rot: 0 }, { type: 'house', x: 6, y: 7, rot: 0 },
             { type: 'corner', x: 2, y: 7, rot: 0 }, { type: 'hut', x: 8, y: 3, rot: 0 }],
     inv: { chimney: 1, hut: 1, wattle: 1, tree: 2, rotunda: 1 },
     solution: [{ type: 'chimney', x: 6, y: 0, rot: 3 }, { type: 'hut', x: 9, y: 2, rot: 0 }, { type: 'wattle', x: 2, y: 3, rot: 0 }, { type: 'tree', x: 4, y: 6, rot: 2 }, { type: 'tree', x: 3, y: 6, rot: 1 }, { type: 'rotunda', x: 6, y: 2, rot: 3 }] },
-  // ===== режимы =====
-  { name: 'Снежный перевал', mode: 'Занос', wind: 12, dir: [1, 0], duration: 10, mods: { drift: 'snow' },
+  { name: 'Снежный перевал', chapter: 'Режимы · черновик', mode: 'Занос', wind: 12, dir: [1, 0], duration: 10, mods: { drift: 'snow' },
     hint: 'Снег оседает там, где ветер стихает. Дорога и дома не должны утонуть в сугробах.',
     roads: [[[6, 0], [6, 9]]],
     fixed: [{ type: 'hut', x: 4, y: 2, rot: 0 }, { type: 'house', x: 3, y: 6, rot: 0 }, { type: 'hut', x: 8, y: 4, rot: 0 }, { type: 'house', x: 8, y: 8, rot: 1 }],
     inv: { fence: 2, wattle: 1, tree: 2 },
     solution: [{ type: 'fence', x: 2, y: 2, rot: 3 }, { type: 'fence', x: 1, y: 9, rot: 2 }, { type: 'wattle', x: 1, y: 2, rot: 1 }, { type: 'tree', x: 0, y: 1, rot: 2 }, { type: 'tree', x: 2, y: 1, rot: 2 }] },
-  { name: 'Вырубка', mode: 'Вырубка', wind: 24, dir: [1, 0], duration: 8, logs: 0,
+  { name: 'Вырубка', chapter: 'Режимы · черновик', mode: 'Вырубка', wind: 24, dir: [1, 0], duration: 8, logs: 0,
     hint: 'Нажми на дерево, чтобы срубить его: каждое дерево — бревно. Плетень стоит 2 бревна, забор — 3. Но лес и сам укрывает дома.',
     cost: { wattle: 2, fence: 3 }, shop: ['wattle', 'fence'], startCuts: 3,
     forest: ['0000111111', '0000111111', '0000111111', '0000111111', '0000111111', '0000111111', '0000111111', '0000111111', '0000111111', '0000111111'],
     fixed: [{ type: 'hut', x: 2, y: 1, rot: 0 }, { type: 'house', x: 5, y: 4, rot: 0 }, { type: 'hut', x: 5, y: 6, rot: 0 }, { type: 'hut', x: 8, y: 2, rot: 0 }, { type: 'hut', x: 2, y: 8, rot: 0 }],
     inv: {},
     solution: [{ type: 'wattle', x: 1, y: 7, rot: 1 }, { type: 'wattle', x: 1, y: 1, rot: 3 }, { type: 'wattle', x: 0, y: 7, rot: 3 }, { type: 'wattle', x: 0, y: 2, rot: 1 }], solutionCuts: [[8,0],[6,5],[5,3],[7,0],[4,5],[4,1],[4,2],[5,2]] },
-  { name: 'Ветряная ферма', mode: 'Энергия', wind: 15, dir: [1, 0], duration: 8, target: 320,
+  { name: 'Ветряная ферма', chapter: 'Режимы · черновик', mode: 'Энергия', wind: 15, dir: [1, 0], duration: 8, target: 320,
     hint: 'Ветрякам нужен сильный ветер, домам — слабый. Набери энергию и ничего не потеряй. Арка и щели между домами разгоняют поток.',
     fixed: [{ type: 'hut', x: 3, y: 3, rot: 0 }, { type: 'house', x: 3, y: 6, rot: 0 }, { type: 'hut', x: 8, y: 5, rot: 0 }],
     inv: { mill: 3, arch: 1, fence: 1 },
@@ -916,7 +966,10 @@ const st = {
   layers: { heat: true, streak: true, arrow: false }, preview: true, msg: null, done: {},
   lastBroken: [],
 };
-try { st.done = JSON.parse(localStorage.getItem('poryv-done') || '{}'); } catch (e) {}
+// пройденные уровни — по названию, чтобы перестановка уровней не сбивала прогресс
+try { st.done = JSON.parse(localStorage.getItem('poryv-done-v2') || '{}'); } catch (e) {}
+const isDone = i => i < LEVELS.length && !!st.done[LEVELS[i].name];
+function markDone() { st.done[LEVELS[st.level].name] = 1; try { localStorage.setItem('poryv-done-v2', JSON.stringify(st.done)); } catch (e) {} }
 let view = { ox: 0, oy: 0, tw: 40, hz: 22, w: 0, h: 0, dpr: 1 };
 let colors = {};
 const debris = [];
@@ -1023,7 +1076,8 @@ function loadLevel(i) {
   if (world.sim.c) { world.sim.c.fill(0); world.sim.dep.fill(0); }
   st.freeze = null;
   // обучение на первом прохождении: сначала ветер по пустому полю, потом забор
-  st.tut = !st.sandbox && LEVELS[i].tutorial && !st.done[i] ? 'wind' : null;
+  st.tut = !st.sandbox && LEVELS[i].tutorial && !isDone(i) ? 'wind' : null;
+  st.introDone = false;
   if (st.tut) st.inv = { fence: 0 };
   st.showLoads = st.loadsPref; // нагрузка до прогона — только инструмент разработчика (позже — подсказка за рекламу)
   buildTimeline();
@@ -1054,11 +1108,11 @@ function levelText(i) { const L = LEVELS[i]; return L.name + (L.mode ? ' · ' + 
 function buildLevels() {
   const box = $('#levels'); box.innerHTML = '';
   [...LEVELS.map((L, i) => (i + 1) + ''), 'Песочница'].forEach((label, i) => {
-    const sep = i === 6 ? 'режимы' : i === ACTIVE_LEVELS && i < LEVELS.length ? 'архив' : null;
+    const ch = i < LEVELS.length ? LEVELS[i].chapter : null, sep = ch && ch !== (LEVELS[i - 1] || {}).chapter ? ch : null;
     if (sep) { const d = document.createElement('span'); d.className = 'lv-sep'; d.textContent = sep; box.appendChild(d); }
     const b = document.createElement('button');
     b.className = 'chip'; b.id = 'lv' + i;
-    b.innerHTML = label + (st.done[i] ? ' <span class="done">✓</span>' : '');
+    b.innerHTML = label + (isDone(i) ? ' <span class="done">✓</span>' : '');
     b.title = i < LEVELS.length ? levelText(i) : 'Свободная расстановка';
     b.setAttribute('aria-pressed', i === st.level);
     b.onclick = () => loadLevel(i);
@@ -1142,6 +1196,10 @@ function updateUI() {
   const s = $('#status'); s.innerHTML = '';
   let text = st.msg;
   if (!text && tutBuild) text = tutText();
+  // реплики жителей перед уровнем — до первого действия или «Понятно»
+  const intro = !st.sandbox && LEVELS[st.level].intro;
+  if (!text && st.phase === 'build' && intro && !st.introDone)
+    text = { lines: intro.map(([w, t]) => say(w, t)), cls: 'coach', act: { label: 'Понятно', fn: () => { st.introDone = true; updateUI(); } } };
   if (!text && st.phase === 'build') {
     text = st.sel ? `${TYPES[st.sel].name}: нажми на клетку, чтобы поставить. Поворот — кнопка или R.`
       : st.picked && world.pieces.includes(st.picked) ? pickedText(st.picked)
@@ -1191,6 +1249,7 @@ function placeAt(type, x, y, rot) {
   world.pieces.push(pc);
   if (shopOf()) st.logs -= costOf(type); else st.inv[type]--;
   st.picked = null;
+  st.introDone = true;
   rebuild(world); return true;
 }
 function returnToStash(pc) { if (shopOf()) st.logs += costOf(pc.type); else st.inv[pc.type] = (st.inv[pc.type] || 0) + 1; }
@@ -1400,8 +1459,7 @@ $('#stash').onclick = stash;
 st.showLoads = false;
 st.loadsPref = false;
 $('#loads').onclick = () => { st.showLoads = st.loadsPref = !st.showLoads; updateUI(); };
-const ACTIVE_LEVELS = LEVELS.length;
-if (/[?&]dev\b/.test(location.search)) { document.body.classList.add('dev'); LEVELS.push(...ARCHIVE); }
+if (/[?&]dev\b/.test(location.search)) { document.body.classList.add('dev'); LEVELS.push(...ARCHIVE.map(L => ({ ...L, chapter: 'архив' }))); }
 // проверенное решение уровня (для плейтеста)
 $('#sol').onclick = () => {
   if (st.sandbox || st.phase === 'run') return;
@@ -1446,7 +1504,7 @@ function resetScene() {
 }
 $('#go').onclick = () => {
   if (st.phase === 'build') {
-    st.sel = null; st.picked = null; st.msg = null; st.phase = 'run'; st.frozeRun = false; debris.length = 0;
+    st.sel = null; st.picked = null; st.msg = null; st.phase = 'run'; st.frozeRun = false; st.introDone = true; debris.length = 0;
     beginRun(world); resetParticles(); updateUI();
   } else if (st.phase === 'result') {
     if (st.tut === 'wind') tutToFence(); else resetScene();
@@ -1460,7 +1518,22 @@ const CHARS = {
     svg: '<svg viewBox="0 0 42 42" aria-hidden="true"><rect width="42" height="42" fill="#c6d3df"/><path d="M5 42Q21 30 37 42Z" fill="#f7c21b"/><circle cx="21" cy="23" r="9.5" fill="#f1c9a5"/><path d="M8 17.5Q21 21 34 17.5Q33 15 30 14.5Q28 5 21 5Q14 5 12 14.5Q9 15 8 17.5Z" fill="#f7c21b"/><g fill="none" stroke="#36506b" stroke-width="1"><circle cx="17.5" cy="23.5" r="2.6"/><circle cx="24.5" cy="23.5" r="2.6"/><path d="M20.1 23.5h1.8"/></g><circle cx="17.5" cy="23.5" r="1.1" fill="#17212c"/><circle cx="24.5" cy="23.5" r="1.1" fill="#17212c"/><path d="M15.5 28.3Q21 25.8 26.5 28.3Q21 30.2 15.5 28.3Z" fill="#8a8f96"/></svg>' },
   ilya: { name: 'Дед Илья', role: 'хижина у скал', ring: '#c4553d',
     svg: '<svg viewBox="0 0 42 42" aria-hidden="true"><rect width="42" height="42" fill="#ece5d3"/><path d="M5 42Q21 30 37 42Z" fill="#8a6240"/><circle cx="21" cy="22" r="9.5" fill="#eec39c"/><path d="M11 21Q11 37 21 37Q31 37 31 21Q27 28 21 28Q15 28 11 21Z" fill="#f3f1ea"/><path d="M11 17Q12 8 21 8Q30 8 31 17Z" fill="#c4553d"/><rect x="9.5" y="16" width="23" height="3" rx="1.5" fill="#9a3f2c"/><circle cx="17.5" cy="22" r="1.3" fill="#17212c"/><circle cx="24.5" cy="22" r="1.3" fill="#17212c"/><path d="M16 19.8h3M23 19.8h3" stroke="#f3f1ea" stroke-width="1.3"/></svg>' },
+  masha: { name: 'Тётя Маша', role: 'садовница', ring: '#5f9a5a', svg: woman('#e9f0dc', '#5f9a5a', '#3f7a45', '#c96f5a') },
+  stepa: { name: 'Стёпа', role: 'молодой рыбак', ring: '#3d7fb8',
+    svg: '<svg viewBox="0 0 42 42" aria-hidden="true"><rect width="42" height="42" fill="#d9e6ef"/><path d="M5 42Q21 30 37 42Z" fill="#f6f8fa"/><path d="M8 39.5Q21 32 34 39.5M6.5 41.5Q21 34 35.5 41.5" stroke="#3d7fb8" stroke-width="1.6" fill="none"/><circle cx="21" cy="23" r="9" fill="#f1c9a5"/><path d="M11.5 19Q12 7 21 7Q30 7 30.5 19Z" fill="#3d7fb8"/><rect x="11" y="17" width="20" height="3.2" rx="1.6" fill="#2f5d8a"/><circle cx="17.5" cy="23.5" r="1.3" fill="#17212c"/><circle cx="24.5" cy="23.5" r="1.3" fill="#17212c"/><g fill="#c98a5a"><circle cx="15.5" cy="26.5" r=".7"/><circle cx="17" cy="27.3" r=".7"/><circle cx="25" cy="27.3" r=".7"/><circle cx="26.5" cy="26.5" r=".7"/></g><path d="M18.5 28.5Q21 30.2 23.5 28.5" stroke="#9a5440" stroke-width="1" fill="none"/></svg>' },
+  nyura: { name: 'Баба Нюра', role: 'соседка', ring: '#7a5c8e', svg: woman('#efe3ea', '#7a5c8e', '#5d4370', '#d98a8a', true) },
+  zina: { name: 'Баба Зина', role: 'другая соседка', ring: '#e9a23b', svg: woman('#f6ecd8', '#e9a23b', '#b9781f', '#d98a8a', true) },
+  fyodor: { name: 'Кузнец Фёдор', role: 'кузня на краю', ring: '#5a4636',
+    svg: '<svg viewBox="0 0 42 42" aria-hidden="true"><rect width="42" height="42" fill="#e2dac6"/><path d="M3 42Q21 28 39 42Z" fill="#6b5240"/><path d="M15 42V35h12v7" fill="#8a6240"/><circle cx="21" cy="21" r="10" fill="#e3b08a"/><path d="M11 17Q12 9 21 9Q30 9 31 17Q27 13 21 13Q15 13 11 17Z" fill="#3b2a20"/><path d="M11 21Q11 36 21 36Q31 36 31 21Q27 27.5 21 27.5Q15 27.5 11 21Z" fill="#3b2a20"/><path d="M15 19.5h4M23 19.5h4" stroke="#3b2a20" stroke-width="1.8"/><circle cx="17" cy="22" r="1.3" fill="#17212c"/><circle cx="25" cy="22" r="1.3" fill="#17212c"/></svg>' },
 };
+// женщина в платке: фон, платок, тень платка, румянец, седые пряди (бабушки)
+function woman(bg, scarf, dark, cheek, grey) {
+  return `<svg viewBox="0 0 42 42" aria-hidden="true"><rect width="42" height="42" fill="${bg}"/><path d="M5 42Q21 30 37 42Z" fill="${dark}"/><circle cx="21" cy="20" r="12.5" fill="${scarf}"/>` +
+    `<path d="M18 31L21 37L24 31Z" fill="${dark}"/><circle cx="21" cy="23" r="8.2" fill="#f1c9a5"/>` +
+    (grey ? '<path d="M13.5 19.5Q21 14.5 28.5 19.5Q21 17.5 13.5 19.5Z" fill="#e4e1da"/>' : '') +
+    `<circle cx="18" cy="23.5" r="1.2" fill="#17212c"/><circle cx="24" cy="23.5" r="1.2" fill="#17212c"/><circle cx="16.3" cy="26.3" r="1.5" fill="${cheek}" opacity=".55"/><circle cx="25.7" cy="26.3" r="1.5" fill="${cheek}" opacity=".55"/>` +
+    `<path d="M19 28.2Q21 29.6 23 28.2" stroke="#9a5440" stroke-width="1" fill="none"/>${grey ? '<g fill="none" stroke="#5a6979" stroke-width=".9"><circle cx="18" cy="23.5" r="2.4"/><circle cx="24" cy="23.5" r="2.4"/><path d="M20.4 23.5h1.2"/></g>' : ''}</svg>`;
+}
 const say = (who, t) => ({ who, t });
 function lineEl({ who, t }) {
   const C = CHARS[who], el = document.createElement('div');
@@ -1518,7 +1591,7 @@ function finishRun() {
     updateUI(); return;
   }
   if (st.tut === 'fence' && ev.ok) {
-    st.tut = 'camera'; st.done[st.level] = 1; try { localStorage.setItem('poryv-done', JSON.stringify(st.done)); } catch (e) {}
+    st.tut = 'camera'; markDone();
     st.msg = { cls: 'coach win', next: true, lines: [
       say('ilya', 'Стоит! Вот спасибо!'),
       say('keeper', 'Забор принял ветер на себя, а за ним тихо — видишь синее пятно? Так и играем: ищи, где ветру тише. А теперь поверни сцену кнопками ⟲ ⟳ внизу — глянь на остров с другой стороны.')] };
@@ -1528,9 +1601,10 @@ function finishRun() {
     if (st.sandbox) st.msg = { t: 'Устояло всё.', cls: 'win' };
     else if (invLeft() > 0) st.msg = { t: `Получилось, но расставлено не всё: осталось ${invLeft()} шт. Уровень засчитается, когда все фигуры на поле.`, cls: '' };
     else {
-      st.done[st.level] = 1; try { localStorage.setItem('poryv-done', JSON.stringify(st.done)); } catch (e) {}
-      const extra = world.target ? ` Энергия ${Math.round(world.energy)} из ${world.target}.` : '';
-      st.msg = { t: 'Получилось! Все цели уровня выполнены.' + extra, cls: 'win', next: st.level + 1 < LEVELS.length };
+      markDone();
+      const extra = world.target ? ` Энергия ${Math.round(world.energy)} из ${world.target}.` : '', L = LEVELS[st.level], next = st.level + 1 < LEVELS.length;
+      st.msg = L.outro ? { lines: L.outro.map(([w, t]) => say(w, t)), cls: 'coach win', next }
+        : { t: 'Получилось! Все цели уровня выполнены.' + extra, cls: 'win', next };
     }
   } else {
     const list = ev.fails.map(f => {
