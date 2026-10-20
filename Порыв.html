@@ -97,8 +97,15 @@ h1 { font: 400 17px/1 var(--f-display); margin: 0; letter-spacing: 0.04em; displ
 /* обучение: пульсирует то, что нужно нажать; реплика смотрителя */
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(247, 194, 27, 0.75); } 50% { box-shadow: 0 0 0 9px rgba(247, 194, 27, 0); } }
 .pulse { animation: pulse 1.4s ease-in-out infinite; }
-.status span.coach { border-color: var(--accent); text-align: left; }
-.status .who { display: block; font: 600 11px var(--f-body); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+.status span.coach { display: grid; gap: 10px; border-color: var(--accent); text-align: left; }
+.line { display: grid; grid-template-columns: 42px 1fr; gap: 10px; align-items: start; }
+.ava { width: 42px; height: 42px; border-radius: 50%; overflow: hidden; }
+.ava svg { display: block; width: 100%; height: 100%; }
+.line .who { font: 600 13px var(--f-body); margin-right: 6px; }
+.line .role { font-style: normal; font-size: 11px; color: var(--muted); }
+.line p { margin: 2px 0 0; }
+.acts { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+.status .acts button { margin-left: 0; }
 .status .skip { background: none; border: 0; color: var(--muted); font: 500 12px var(--f-body); text-decoration: underline; cursor: pointer; padding: 0; }
 /* инструменты разработчика — только с ?dev в адресе */
 body:not(.dev) .dev { display: none !important; }
@@ -162,7 +169,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       <div class="row dev"><span class="lbl">Разрушение</span><div class="seg"><button id="mThr" aria-pressed="true" title="Ломается сразу, как только ветер превысил предел">Порог</button><button id="mHp" aria-pressed="false" title="Короткие порывы терпит, долгий сильный ветер стачивает">Прочность</button></div></div>
       <div class="row"><span class="lbl">Расчёт</span><div class="seg"><button id="prev" aria-pressed="true" title="Поток виден во время расстановки, без разрушений">Превью потока</button><button id="vort" class="dev" aria-pressed="false" title="Усиливает вихри за домами">Вихри</button></div>
         <button class="btn" id="sol" title="Показать проверенную расстановку">Показать решение</button></div>
-      <div class="row"><span class="lbl">Подсказки</span><div class="seg"><button id="loads" aria-pressed="false" title="Полоски нагрузки над домами во время расстановки">Нагрузка до прогона</button></div></div>
+      <div class="row dev"><span class="lbl">Подсказки</span><div class="seg"><button id="loads" aria-pressed="false" title="Полоски нагрузки над домами во время расстановки">Нагрузка до прогона</button></div></div>
       <div class="row sandbox" id="sandbox" hidden><span class="lbl">Песочница</span>
         <label>Ветер <b id="wsv">18</b> м/с <input id="ws" type="range" min="6" max="30" step="1" value="18"></label>
         <button class="btn" id="wdir">Направление ↻</button><button class="btn" id="clear">Очистить</button></div>
@@ -1013,7 +1020,7 @@ function loadLevel(i) {
   // обучение на первом прохождении: сначала ветер по пустому полю, потом забор
   st.tut = !st.sandbox && LEVELS[i].tutorial && !st.done[i] ? 'wind' : null;
   if (st.tut) st.inv = { fence: 0 };
-  st.showLoads = st.loadsPref || (!st.sandbox && i < 3); // на первых уровнях нагрузка видна до прогона
+  st.showLoads = st.loadsPref; // нагрузка до прогона — только инструмент разработчика (позже — подсказка за рекламу)
   buildTimeline();
   buildInv(); updateUI();
 }
@@ -1123,8 +1130,9 @@ function updateUI() {
   $('#lArrow').setAttribute('aria-pressed', st.layers.arrow);
   $('#loads').setAttribute('aria-pressed', st.showLoads);
   const tutBuild = st.tut && st.phase === 'build';
-  $('#go').classList.toggle('pulse', tutBuild && (st.tut === 'wind' || invLeft() === 0));
+  $('#go').classList.toggle('pulse', tutBuild && (st.tut === 'wind' || (st.tut === 'fence' && fenceState() === 'ok')));
   for (const b of document.querySelectorAll('.piece')) b.classList.toggle('pulse', tutBuild && st.tut === 'fence' && invLeft() > 0);
+  for (const id of ['#camL', '#camR']) $(id).classList.toggle('pulse', st.tut === 'camera');
   const s = $('#status'); s.innerHTML = '';
   let text = st.msg;
   if (!text && tutBuild) text = tutText();
@@ -1140,11 +1148,14 @@ function updateUI() {
     const sp = document.createElement('span');
     if (typeof text === 'object') {
       sp.className = text.cls || '';
-      if (text.who) { const w = document.createElement('b'); w.className = 'who'; w.textContent = text.who; sp.appendChild(w); }
-      sp.appendChild(document.createTextNode(text.t));
+      // реплики персонажей — карточками, кнопки — отдельной строкой; обычный текст — кнопка в строку
+      let acts = sp;
+      if (text.lines) { for (const l of text.lines) sp.appendChild(lineEl(l)); acts = document.createElement('div'); acts.className = 'acts'; }
+      else sp.appendChild(document.createTextNode(text.t));
+      if (text.skip) { const sk = document.createElement('button'); sk.className = 'skip'; sk.textContent = 'пропустить обучение'; sk.onclick = skipTut; acts.appendChild(sk); }
       const act = text.act || (text.next ? { label: 'Дальше →', fn: () => loadLevel(st.level + 1) } : null);
-      if (act) { const nb = document.createElement('button'); nb.className = 'btn'; nb.textContent = act.label; nb.onclick = act.fn; sp.appendChild(nb); }
-      if (text.skip) { const sk = document.createElement('button'); sk.className = 'skip'; sk.textContent = 'пропустить обучение'; sk.onclick = skipTut; sp.append(' ', sk); }
+      if (act) { const nb = document.createElement('button'); nb.className = 'btn'; nb.textContent = act.label; nb.onclick = act.fn; acts.appendChild(nb); }
+      if (acts !== sp && acts.children.length) sp.appendChild(acts);
     }
     else sp.textContent = text;
     s.appendChild(sp);
@@ -1279,7 +1290,7 @@ cv.addEventListener('pointermove', e => {
   if (d.moved && d.kind === 'cam') {
     // палец: одним пальцем камера не крутится (только кнопки ⟲⟳), при зуме — двигаем вид
     if (d.pan || (d.touch && cam.zoom > 1.05)) { cam.px = d.px0 + sx - d.sx; cam.py = d.py0 + sy - d.sy; }
-    else if (!d.touch) { cam.a = cam.target = d.a0 + (sx - d.sx) * 0.009; }
+    else if (!d.touch) { cam.a = cam.target = d.a0 + (sx - d.sx) * 0.009; if (Math.abs(sx - d.sx) > 60) tutCamDone(); }
   }
 });
 function cancelPieceDrag() {
@@ -1346,8 +1357,11 @@ function rotate() {
     const pc = st.picked, others = world.pieces.filter(p => p !== pc);
     const tmp = { pieces: others };
     const nr = (pc.rot + 1) % 4;
+    // крутим вокруг середины фигуры: забор поперёк → вдоль через ту же клетку
+    const oc = centerOff(pc.type, pc.rot), nc = centerOff(pc.type, nr);
+    const bx = pc.x + oc[0] - nc[0], by = pc.y + oc[1] - nc[1];
     for (const [dx, dy] of [[0, 0], [-1, 0], [0, -1], [-1, -1], [1, 0], [0, 1]]) {
-      const cand = { ...pc, rot: nr, x: pc.x + dx, y: pc.y + dy };
+      const cand = { ...pc, rot: nr, x: bx + dx, y: by + dy };
       if (canPlace(tmp, cand)) { pc.rot = nr; pc.x = cand.x; pc.y = cand.y; rebuild(world); st.msg = null; updateUI(); return; }
     }
     st.msg = 'Тут не развернуть — мешают соседи или край поля.'; updateUI(); return;
@@ -1361,7 +1375,7 @@ function stash() {
   returnToStash(pc);
   st.picked = null; rebuild(world); updateUI();
 }
-function turnCam(k) { cam.target = Math.round(cam.target / (Math.PI / 2)) * (Math.PI / 2) + k * Math.PI / 2; }
+function turnCam(k) { cam.target = Math.round(cam.target / (Math.PI / 2)) * (Math.PI / 2) + k * Math.PI / 2; tutCamDone(); }
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   const k = e.key.toLowerCase();
@@ -1419,6 +1433,7 @@ $('#clear').onclick = () => { if (st.phase === 'build') { world.pieces = []; reb
 function resetScene() {
   for (const pc of world.pieces) { pc.broken = false; pc.load = 0; pc.hp = 1; pc.flying = null; pc.landed = null; pc.energy = 0; pc.closedT = 0; pc.jammed = false; if (TYPES[pc.type].kind === 'gate') pc.open = true; }
   debris.length = 0; st.phase = 'build'; st.msg = null; st.freeze = null; world.energy = 0;
+  if (st.tut === 'camera') st.tut = null;
   world.dir = world.baseDir.slice(); if (world.sim.c) { world.sim.c.fill(0); world.sim.dep.fill(0); }
   rebuild(world); resetParticles(); updateUI();
 }
@@ -1431,23 +1446,56 @@ $('#go').onclick = () => {
   }
 };
 
+// ---------- персонажи ----------
+// Реплика — { who, t }; сообщение с репликами — { lines: [...], cls: 'coach', act?, next?, skip? }
+const CHARS = {
+  keeper: { name: 'Петрович', role: 'смотритель метеостанции', ring: '#f7c21b',
+    svg: '<svg viewBox="0 0 42 42" aria-hidden="true"><rect width="42" height="42" fill="#c6d3df"/><path d="M5 42Q21 30 37 42Z" fill="#f7c21b"/><circle cx="21" cy="23" r="9.5" fill="#f1c9a5"/><path d="M8 17.5Q21 21 34 17.5Q33 15 30 14.5Q28 5 21 5Q14 5 12 14.5Q9 15 8 17.5Z" fill="#f7c21b"/><g fill="none" stroke="#36506b" stroke-width="1"><circle cx="17.5" cy="23.5" r="2.6"/><circle cx="24.5" cy="23.5" r="2.6"/><path d="M20.1 23.5h1.8"/></g><circle cx="17.5" cy="23.5" r="1.1" fill="#17212c"/><circle cx="24.5" cy="23.5" r="1.1" fill="#17212c"/><path d="M15.5 28.3Q21 25.8 26.5 28.3Q21 30.2 15.5 28.3Z" fill="#8a8f96"/></svg>' },
+  ilya: { name: 'Дед Илья', role: 'хижина у скал', ring: '#c4553d',
+    svg: '<svg viewBox="0 0 42 42" aria-hidden="true"><rect width="42" height="42" fill="#ece5d3"/><path d="M5 42Q21 30 37 42Z" fill="#8a6240"/><circle cx="21" cy="22" r="9.5" fill="#eec39c"/><path d="M11 21Q11 37 21 37Q31 37 31 21Q27 28 21 28Q15 28 11 21Z" fill="#f3f1ea"/><path d="M11 17Q12 8 21 8Q30 8 31 17Z" fill="#c4553d"/><rect x="9.5" y="16" width="23" height="3" rx="1.5" fill="#9a3f2c"/><circle cx="17.5" cy="22" r="1.3" fill="#17212c"/><circle cx="24.5" cy="22" r="1.3" fill="#17212c"/><path d="M16 19.8h3M23 19.8h3" stroke="#f3f1ea" stroke-width="1.3"/></svg>' },
+};
+const say = (who, t) => ({ who, t });
+function lineEl({ who, t }) {
+  const C = CHARS[who], el = document.createElement('div');
+  el.className = 'line';
+  el.innerHTML = `<div class="ava" style="box-shadow:0 0 0 2px ${C.ring}">${C.svg}</div><div><b class="who"></b><i class="role"></i><p></p></div>`;
+  el.querySelector('.who').textContent = C.name; el.querySelector('.role').textContent = C.role; el.querySelector('p').textContent = t;
+  return el;
+}
+
 // ---------- обучение первого уровня ----------
-const COACH = 'Смотритель';
+// шаги: wind (ветер по пустому полю) → fence (поставить и повернуть забор) → camera (после победы — повернуть сцену)
+const tutSol = () => LEVELS[st.level].solution[0];
+function fenceState() { // null — забора нет; turn — стоит поперёк; move — не там; ok — на подсветке
+  const f = world.pieces.find(p => !p.fixed && p.type === 'fence');
+  if (!f) return null;
+  const tg = new Set(pieceCells(tutSol()).map(String));
+  if (pieceCells(f).every(c => tg.has(String(c)))) return 'ok';
+  return f.rot % 2 !== tutSol().rot % 2 ? 'turn' : 'move';
+}
 function tutText() {
-  if (st.tut === 'wind') return { who: COACH, cls: 'coach', skip: true,
-    t: 'Это хижина деда Ильи. Ветер дует со стороны жёлтых стрелок — 21 м/с, а хижина держит только 14. Жми «Ветер!» и смотри, что будет.' };
-  if (invLeft() > 0) return { who: COACH, cls: 'coach', skip: true,
-    t: 'Прикроем её. Перетащи забор снизу на подсвеченные клетки — между ветром и хижиной.' };
-  return { who: COACH, cls: 'coach', t: 'Забор стоит. Теперь жми «Ветер!»' };
+  const coach = (t, skip) => ({ lines: [say('keeper', t)], cls: 'coach', skip });
+  if (st.tut === 'wind') return coach('Видишь хижину деда Ильи? Она выдерживает 14 м/с, а на нас идёт 21 — со стороны жёлтых стрелок. Жми «Ветер!», посмотрим, что будет.', true);
+  const fs = fenceState();
+  if (!fs) return coach('Прикроем её. Перетащи забор снизу на подсвеченные клетки — между ветром и хижиной.', true);
+  if (fs === 'turn') return coach('Забор встал поперёк. Тапни по нему — он повернётся.', true);
+  if (fs === 'move') return coach('Теперь перетащи забор на подсвеченные клетки.', true);
+  return coach('Забор на месте. Жми «Ветер!»');
 }
 function tutToFence() {
   st.tut = 'fence'; st.inv = { fence: 1 };
-  st.rot = LEVELS[st.level].solution[0].rot; // забор из панели сразу повёрнут как подсветка
+  st.rot = (tutSol().rot + 1) % 4; // забор приходит поперёк подсветки — игрок учится поворачивать
   buildInv(); resetScene();
+}
+function tutCamDone() {
+  if (st.tut !== 'camera') return;
+  st.tut = null;
+  st.msg = { lines: [say('keeper', 'Вот так. На компьютере сцену крутят ещё и мышью — тяни за пустое место. Пойдём дальше, в посёлке ждут.')], cls: 'coach win', next: true };
+  updateUI();
 }
 function skipTut() {
   if (st.phase === 'run') return;
-  st.tut = null; st.inv = { ...LEVELS[st.level].inv };
+  st.tut = null; st.rot = 0; st.inv = { ...LEVELS[st.level].inv };
   for (const pc of world.pieces) if (!pc.fixed) st.inv[pc.type] = Math.max(0, (st.inv[pc.type] || 0) - 1);
   buildInv(); resetScene();
 }
@@ -1456,15 +1504,17 @@ function finishRun() {
   st.phase = 'result';
   const ev = evaluate(world);
   if (st.tut === 'wind') {
-    st.msg = { who: COACH, cls: 'coach', act: { label: 'Попробуем →', fn: tutToFence },
-      t: ev.ok ? 'Устояла — повезло. Но ветер у стен был у самого предела. Давай прикроем её надёжно.'
-        : 'Сдуло! Ветер у стен поднялся выше 14 м/с — это предел хижины. Цвета на поле — сила ветра: красное — сильный, синее — тихо. Нужно, чтобы у хижины стало синее.' };
+    st.msg = { cls: 'coach', act: { label: 'Попробуем →', fn: tutToFence }, lines: ev.ok
+      ? [say('keeper', 'Устояла — повезло. Но ветер у стен был у самого предела. Давай прикроем её надёжно.')]
+      : [say('ilya', 'Моя хижина!..'),
+         say('keeper', 'Ветер у её стен поднялся выше 14 м/с — это её предел. Цвета на поле — сила ветра: красное — сильный, синее — тихо. Нужно, чтобы у хижины стало синее.')] };
     updateUI(); return;
   }
   if (st.tut === 'fence' && ev.ok) {
-    st.tut = null; st.done[st.level] = 1; try { localStorage.setItem('poryv-done', JSON.stringify(st.done)); } catch (e) {}
-    st.msg = { who: COACH, cls: 'coach win', next: true,
-      t: 'Устояла! Забор принял ветер на себя, а за ним тихо — видишь синее пятно? В этом вся игра: найди, где ветру тише, и спрячь там дома.' };
+    st.tut = 'camera'; st.done[st.level] = 1; try { localStorage.setItem('poryv-done', JSON.stringify(st.done)); } catch (e) {}
+    st.msg = { cls: 'coach win', next: true, lines: [
+      say('ilya', 'Стоит! Вот спасибо!'),
+      say('keeper', 'Забор принял ветер на себя, а за ним тихо — видишь синее пятно? Так и играем: ищи, где ветру тише. А теперь поверни сцену кнопками ⟲ ⟳ внизу — глянь на остров с другой стороны.')] };
     updateUI(); return;
   }
   if (ev.ok) {
@@ -1922,9 +1972,12 @@ function drawPieces(time) {
     zOff = 0; ctx.lineWidth = 1;
   };
   // обучение: куда поставить забор
-  if (st.tut === 'fence' && st.phase === 'build' && invLeft() > 0 && !dragging) {
+  const fs = st.tut === 'fence' && st.phase === 'build' && !dragging ? fenceState() : 'ok';
+  if (fs !== 'ok') {
     const a = 0.5 + 0.5 * Math.sin(time * 5);
-    cellRing(pieceCells(LEVELS[st.level].solution[0]), `rgba(247,194,27,${(0.12 + 0.25 * a).toFixed(2)})`, colors.accent, 2.5);
+    cellRing(pieceCells(tutSol()), `rgba(247,194,27,${(0.12 + 0.25 * a).toFixed(2)})`, colors.accent, 2.5);
+    // забор поперёк — подсвечиваем сам забор: «тапни по нему»
+    if (fs === 'turn') cellRing(pieceCells(world.pieces.find(p => !p.fixed && p.type === 'fence')), null, `rgba(28,22,0,${(0.4 + 0.5 * a).toFixed(2)})`, 2);
   }
   // стоп-кадр поломки
   if (st.freeze) {
