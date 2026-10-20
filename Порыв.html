@@ -418,11 +418,6 @@ const LEVELS = [
     fixed: [{ type: 'hut', x: 2, y: 1, rot: 0 }, { type: 'house', x: 5, y: 4, rot: 0 }, { type: 'hut', x: 5, y: 6, rot: 0 }, { type: 'hut', x: 8, y: 2, rot: 0 }, { type: 'hut', x: 2, y: 8, rot: 0 }],
     inv: {},
     solution: [{ type: 'wattle', x: 1, y: 7, rot: 1 }, { type: 'wattle', x: 1, y: 1, rot: 3 }, { type: 'wattle', x: 0, y: 7, rot: 3 }, { type: 'wattle', x: 0, y: 2, rot: 1 }], solutionCuts: [[8,0],[6,5],[5,3],[7,0],[4,5],[4,1],[4,2],[5,2]] },
-  { name: 'Перемена ветра', mode: 'Смена ветра', wind: 18, dir: [1, 0], duration: 10, shift: { at: 4.5, dir: [0, 1] },
-    hint: 'Через 4.5 секунды ветер повернёт. Укрытие от первого ветра может стать трубой для второго.',
-    fixed: [{ type: 'hut', x: 6, y: 6, rot: 0 }, { type: 'house', x: 2, y: 6, rot: 0 }, { type: 'hut', x: 6, y: 2, rot: 0 }, { type: 'rock', x: 0, y: 0, rot: 0 }],
-    inv: { corner: 1, fence: 2, wedge: 1 },
-    solution: [{ type: 'corner', x: 7, y: 4, rot: 1 }, { type: 'fence', x: 5, y: 1, rot: 1 }, { type: 'fence', x: 8, y: 7, rot: 3 }, { type: 'wedge', x: 4, y: 5, rot: 2 }] },
   { name: 'Ветряная ферма', mode: 'Энергия', wind: 15, dir: [1, 0], duration: 8, target: 320,
     hint: 'Ветрякам нужен сильный ветер, домам — слабый. Набери энергию и ничего не потеряй. Арка и щели между домами разгоняют поток.',
     fixed: [{ type: 'hut', x: 3, y: 3, rot: 0 }, { type: 'house', x: 3, y: 6, rot: 0 }, { type: 'hut', x: 8, y: 5, rot: 0 }],
@@ -430,9 +425,14 @@ const LEVELS = [
     solution: [{ type: 'mill', x: 2, y: 1, rot: 0 }, { type: 'mill', x: 2, y: 7, rot: 2 }, { type: 'mill', x: 3, y: 2, rot: 0 }, { type: 'arch', x: 7, y: 6, rot: 0 }, { type: 'fence', x: 4, y: 3, rot: 3 }] },
 ];
 
-// Архив: уровни и режимы, убранные из игры (2026-10-20). Код механик остался.
+// Архив: уровни и режимы, убранные из игры (2026-10-20): Смена ветра, Дым, Рельеф, Кемпинг, Сцепка, Шлюз. Код механик остался.
 // В игре не видны; с ?dev в адресе показываются после основных уровней.
 const ARCHIVE = [
+  { name: 'Перемена ветра', mode: 'Смена ветра', wind: 18, dir: [1, 0], duration: 10, shift: { at: 4.5, dir: [0, 1] },
+    hint: 'Через 4.5 секунды ветер повернёт. Укрытие от первого ветра может стать трубой для второго.',
+    fixed: [{ type: 'hut', x: 6, y: 6, rot: 0 }, { type: 'house', x: 2, y: 6, rot: 0 }, { type: 'hut', x: 6, y: 2, rot: 0 }, { type: 'rock', x: 0, y: 0, rot: 0 }],
+    inv: { corner: 1, fence: 2, wedge: 1 },
+    solution: [{ type: 'corner', x: 7, y: 4, rot: 1 }, { type: 'fence', x: 5, y: 1, rot: 1 }, { type: 'fence', x: 8, y: 7, rot: 3 }, { type: 'wedge', x: 4, y: 5, rot: 2 }] },
   { name: 'Дым над городом', mode: 'Дым', wind: 14, dir: [1, 0], duration: 9, mods: { smoke: true },
     hint: 'Поставь трубу завода в промзону (тёмные клетки) так, чтобы дым не накрыл жилые дома.',
     zone: [[0, 0], [1, 0], [0, 1], [1, 1], [0, 8], [1, 8], [0, 9], [1, 9]],
