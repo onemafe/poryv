@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Карта уровней Порыва</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Оглавление прототипов карты уровней — в том же виде, что index.html (прототипы экрана уровня). */
+:root {
+  --bg: #dfe7ee; --sky: #f6f8fa; --card: #ffffff; --line: rgba(30, 50, 75, 0.12);
+  --ink: #17212c; --muted: #5a6979; --accent: #f7c21b; --accent-deep: #b88a00; --slab: #314a66; --ground: #ece5d3; --paper: #f7f3ea; --proto: #7a4fd0;
+  --f-display: "Rubik Mono One", "Arial Black", system-ui, sans-serif;
+  --f-body: "Golos Text", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+body { background: var(--bg) radial-gradient(120% 70% at 50% 0%, var(--sky) 0%, var(--bg) 70%); color: var(--ink); font: 15px/1.5 var(--f-body); margin: 0; }
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 32px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+header { display: grid; gap: 10px; max-width: 66ch; }
+.kick { font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 8px; }
+.flag { width: 16px; height: 16px; position: relative; flex: none; }
+.flag::before { content: ""; position: absolute; left: 0; top: 0; width: 2px; height: 16px; background: var(--ink); }
+.flag::after { content: ""; position: absolute; left: 2px; top: 1px; width: 13px; height: 9px; background: var(--accent); clip-path: polygon(0 0, 100% 50%, 0 100%); }
+h1 { margin: 0; font: 400 clamp(24px, 5vw, 34px)/1.1 var(--f-display); letter-spacing: 0.03em; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); }
+header a { color: var(--ink); font-weight: 600; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.v { display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; color: inherit; text-decoration: none; box-shadow: 0 6px 20px rgba(30, 50, 75, 0.08); }
+.v:hover { border-color: var(--accent-deep); }
+.v:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 2px; }
+.v svg { width: 100%; height: 160px; background: #eef2f6; border-radius: 10px; }
+.v h2 { margin: 0; font: 400 15px var(--f-display); letter-spacing: 0.03em; display: flex; gap: 8px; align-items: baseline; }
+.v h2 span { font: 500 12px var(--f-mono); color: var(--accent-deep); }
+.v p { margin: 0; font-size: 13px; color: var(--muted); }
+.v .go { font: 600 13px var(--f-body); }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.note { background: rgba(255, 255, 255, 0.6); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.note h3 { margin: 0 0 6px; font: 500 11px var(--f-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.note ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 14px; }
+.note b { font-weight: 600; }
+.tag { font: 500 11px var(--f-mono); color: #fff; background: var(--proto); border-radius: 4px; padding: 1px 5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kick"><span class="flag" aria-hidden="true"></span>Порыв · прототипы карты уровней</div>
+    <h1>Три карты одного пути к шторму</h1>
+    <p>Главный экран с выбором уровней: 4 главы, 33 уровня, звёзды, закрытые главы. Данные и карточки общие, отличается только сама карта. Каждую можно сузить, расширить и повернуть.</p>
+    <p><b>Выбран вариант B «Остров».</b> В нём же — три окна: загрузка, итог уровня (победа и поражение) и открытие новой главы.</p>
+    <p>Прототипы экрана уровня — <a href="index.html">здесь</a>.</p>
+  </header>
+
+  <div class="grid">
+    <a class="v" href="map-a-trail.html">
+      <svg viewBox="0 0 200 160" aria-hidden="true">
+        <rect x="72" y="6" width="56" height="148" rx="8" fill="#fff" stroke="#17212c" stroke-width="1.5"/>
+        <rect x="73" y="7" width="54" height="22" rx="7" fill="#3f4b5e"/>
+        <path d="M100 132 C120 124 118 112 100 104 S80 86 100 78 S120 60 100 52 S82 38 98 30" fill="none" stroke="#f7c21b" stroke-width="3" stroke-linecap="round"/>
+        <g fill="#fff" stroke="#4f8a4b" stroke-width="1.5"><circle cx="100" cy="132" r="5"/><circle cx="112" cy="116" r="5"/><circle cx="96" cy="100" r="5"/></g>
+        <circle cx="108" cy="84" r="7" fill="#f7c21b" stroke="#b88a00" stroke-width="1.5"/>
+        <g fill="#e6eaee" stroke="#cdd5de" stroke-width="1.5"><circle cx="94" cy="66" r="5"/><circle cx="106" cy="50" r="5"/></g>
+        <rect x="78" y="140" width="44" height="9" rx="3" fill="#f7c21b"/>
+      </svg>
+      <h2><span>A</span>Тропа</h2>
+      <p>Классика мобильных головоломок: змейка снизу вверх, от метеостанции через четыре главы к Большому шторму. Прокрутка, таблички глав, шлагбаум на закрытой главе.</p>
+      <span class="go">Открыть →</span>
+    </a>
+    <a class="v" href="map-b-island.html">
+      <svg viewBox="0 0 200 160" aria-hidden="true">
+        <rect x="72" y="6" width="56" height="148" rx="8" fill="#c3d3e0" stroke="#17212c" stroke-width="1.5"/>
+        <g><path d="M88 128l14-7 14 7-14 7z" fill="#dfe9cc"/><path d="M88 128v3l14 7v-3zM116 128v3l-14 7v-3z" fill="#314a66"/></g>
+        <g><path d="M100 100l14-7 14 7-14 7z" fill="#dde3ec" transform="translate(-4 0)"/><path d="M96 100v3l14 7v-3zM124 100v3l-14 7v-3z" fill="#314a66"/></g>
+        <g opacity=".55"><path d="M84 72l14-7 14 7-14 7z" fill="#d6e8e6"/><path d="M84 72v3l14 7v-3zM112 72v3l-14 7v-3z" fill="#314a66"/></g>
+        <g opacity=".55"><path d="M100 46l14-7 14 7-14 7z" fill="#e6ebf1" transform="translate(-6 0)"/><path d="M94 46v3l14 7v-3zM122 46v3l-14 7v-3z" fill="#314a66"/></g>
+        <path d="M96 30q-3-8 5-9q2-7 10-4q8-1 8 7z" fill="#3a4659"/>
+        <path d="M102 134 L106 100 L98 74" fill="none" stroke="#f7c21b" stroke-width="2" stroke-dasharray="0" />
+        <rect x="78" y="142" width="44" height="8" rx="3" fill="#f7c21b"/>
+      </svg>
+      <h2><span>B</span>Остров</h2>
+      <p>Четыре плиты-главы цепочкой через море — такие же, как поле в игре. Весь путь виден сразу, без прокрутки. Тап по главе — наезд камеры, на плите уровни змейкой.</p>
+      <span class="go">Открыть →</span>
+    </a>
+    <a class="v" href="map-c-journal.html">
+      <svg viewBox="0 0 200 160" aria-hidden="true">
+        <rect x="72" y="6" width="56" height="148" rx="8" fill="#fff" stroke="#17212c" stroke-width="1.5"/>
+        <g><rect x="76" y="20" width="11" height="6" rx="1" fill="#4f8a4b"/><rect x="88" y="20" width="11" height="6" rx="1" fill="#41607e"/><rect x="100" y="20" width="11" height="6" rx="1" fill="#cdd5de"/><rect x="112" y="20" width="12" height="6" rx="1" fill="#cdd5de"/></g>
+        <rect x="76" y="27" width="48" height="108" rx="3" fill="#f7f3ea"/>
+        <rect x="80" y="32" width="24" height="6" rx="1" fill="#17212c"/>
+        <path d="M82 54h36" stroke="rgba(90,70,40,.3)"/>
+        <g fill="#fff" stroke="rgba(90,70,40,.35)"><rect x="80" y="62" width="11" height="13" rx="2"/><rect x="94" y="62" width="11" height="13" rx="2"/></g>
+        <rect x="108" y="62" width="11" height="13" rx="2" fill="#f7c21b"/>
+        <g fill="none" stroke="rgba(90,70,40,.35)" stroke-dasharray="2 2"><rect x="80" y="80" width="11" height="13" rx="2"/><rect x="94" y="80" width="11" height="13" rx="2"/><rect x="108" y="80" width="11" height="13" rx="2"/><rect x="80" y="98" width="11" height="13" rx="2"/><rect x="94" y="98" width="11" height="13" rx="2"/></g>
+        <rect x="78" y="141" width="44" height="9" rx="3" fill="#f7c21b"/>
+      </svg>
+      <h2><span>C</span>Журнал</h2>
+      <p>Журнал смотрителя: страница — глава, закладки сверху, листается вбок. Уровни змейкой по сетке (1-2-3, 6-5-4…). Ничего не прокручивается; на ПК рядом видны соседние главы.</p>
+      <span class="go">Открыть →</span>
+    </a>
+  </div>
+
+  <div class="notes">
+    <section class="note">
+      <h3>Что есть на экране — во всех трёх</h3>
+      <ul>
+        <li><b>Одна главная кнопка «Играть»</b> с номером и названием следующего уровня. С ней карта — это одно касание до игры.</li>
+        <li><b>Звёзды</b>: 0–3 на каждом уровне и общий счёт сверху. Тап по счёту — звёзды по главам.</li>
+        <li><b>Закрытые главы</b> — что нужно для открытия: финал прошлой главы и N ★. Если упёрся в звёзды, «Играть» становится «Добрать ★» и показывает, где их взять.</li>
+        <li><b>Житель у следующего уровня</b> — кому помогаешь. В карточке уровня — его реплика (из <code>intro</code>).</li>
+        <li><b>Значки на уровнях</b>: новая фигура, смена ветра, ветряки (энергия), снег, вырубка, финал главы.</li>
+        <li><b>Песочница</b> (открыта после «Деревни»), <b>звук</b> одной кнопкой — в VK выключение звука обязательно. В настройках: музыка, язык, обучение заново, сообщество VK.</li>
+      </ul>
+    </section>
+    <section class="note">
+      <h3>Что сознательно не стал добавлять</h3>
+      <ul>
+        <li>Рекламу и кнопки за рекламу: VK запрещает рекламу при запуске, а карта — первый экран.</li>
+        <li>Жизни/энергию на попытки, ежедневные задания, рейтинги — в плане «не делаем до релиза».</li>
+        <li>Счётчик подсказок — он нужен на экране уровня, не на карте.</li>
+      </ul>
+    </section>
+    <section class="note">
+      <h3>Что решить</h3>
+      <ul>
+        <li><b>Критерий звёзд.</b> Сейчас из плана: устояли все / ни одна не повреждена / фигура осталась в запасе.</li>
+        <li><b>Сколько ★ на главу.</b> В прототипе 18, 36, 54 из 99 — подобрать по плейтесту.</li>
+        <li><b>С чего начинается игра.</b> Новичка лучше сразу в уровень 1 (обучение), карту показать после него.</li>
+        <li><b>Номер уровня</b>: сквозной (A: 1–33) или внутри главы (B, C: 1–9).</li>
+        <li><b>Сценка главы</b> — когда показывать: при первом открытии главы, поверх карты.</li>
+        <li>Жители Города, Мыса и Перевала ещё не придуманы — на карте «?».</li>
+      </ul>
+    </section>
+    <section class="note">
+      <h3>Как смотреть</h3>
+      <ul>
+        <li>Фиолетовая вкладка <span class="tag">прототип</span> — не интерфейс игры. В ней прогресс игрока: новичок, середина главы, Город, «мало ★», Мыс, всё пройдено.</li>
+        <li>«Играть» в прототипе сразу показывает итог уровня: чаще победа на 1–3 ★, иногда «Не устояло». Когда пройден финал главы и хватает звёзд — окно новой главы.</li>
+        <li>Там же строка «Окна»: загрузка, победа, поражение, новая глава — чтобы посмотреть каждое сразу.</li>
+        <li>Тап по любому уровню — карточка: кто просит, что нового, звёзды.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+</body>
+</html>

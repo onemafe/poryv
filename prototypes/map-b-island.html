@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Порыв — карта B · Остров</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="shared/base.css">
+<link rel="stylesheet" href="shared/map.css">
+<style>
+/* B «Остров»: четыре плиты-главы цепочкой через море к шторму — такие же плиты, как поле в игре.
+   Весь путь виден сразу, без прокрутки. Тап по главе — камера наезжает на плиту, на ней появляются уровни змейкой. */
+.stage { position: fixed; inset: 0; background: linear-gradient(180deg, #a9bccd 0%, #c3d3e0 30%, #d3e0ea 100%); }
+/* место под карту: сверху полоса (58), снизу «Играть» (96); при наезде сверху ещё карточка главы */
+.stage > svg { position: absolute; left: 0; top: calc(var(--pad-t) + 58px); width: 100%; height: calc(100% - var(--pad-t) - var(--pad-b) - 154px); }
+.zoomed .stage > svg { top: calc(var(--pad-t) + 224px); height: calc(100% - var(--pad-t) - var(--pad-b) - 320px); }
+.ov { position: absolute; inset: 0; pointer-events: none; }
+.ov > * { pointer-events: auto; }
+.plate { cursor: pointer; }
+.plate:hover .ptop { filter: brightness(1.04); }
+.plate.shut { cursor: pointer; }
+.dots circle { transition: opacity 0.3s; }
+.zoomed .dots { opacity: 0; }
+.dots .cur { animation: blink 1.4s ease-in-out infinite; }
+@keyframes blink { 50% { stroke-width: 6; } }
+.bolt { animation: flash 5s infinite; }
+@keyframes flash { 0%, 88%, 100% { opacity: 0.25; } 90%, 94% { opacity: 1; } 92% { opacity: 0.4; } }
+
+/* подписи глав на обзоре */
+.plabel { position: absolute; transform: translate(-50%, -100%); display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 14px; border: 0; cursor: pointer;
+  background: #fff; color: var(--ink); font: inherit; text-align: left; box-shadow: 0 6px 18px rgba(30, 50, 75, 0.2); transition: opacity 0.25s; white-space: nowrap; }
+.plabel .num { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: #fff; font: 400 16px var(--f-display); }
+.plabel .t { display: grid; gap: 2px; line-height: 1.15; }
+.plabel b { font: 400 16px var(--f-display); letter-spacing: 0.04em; }
+.plabel small { font: 500 12px var(--f-mono); color: var(--muted); display: flex; align-items: center; gap: 3px; }
+.plabel small .i { width: 13px; height: 13px; }
+.plabel.shut { background: #39465a; color: #fff; }
+.plabel.shut small { color: rgba(255, 255, 255, 0.75); }
+.plabel.here::after { content: "ты здесь"; position: absolute; left: 50%; top: -18px; transform: translateX(-50%); font: 600 10px var(--f-mono); text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--accent-ink); background: var(--accent); padding: 1px 6px; border-radius: 4px; }
+.zoomed .plabel { opacity: 0; pointer-events: none; }
+.ov .node { --d: 50px; font-size: 16px; transition: opacity 0.25s; }
+.ov .node.current { --d: 62px; font-size: 21px; }
+.ov .node.boss { --d: 56px; }
+.ov .node.boss.current { --d: 66px; }
+.ov .node.hide { opacity: 0; pointer-events: none; }
+.ov .node .who { position: absolute; left: -12px; top: -12px; }
+.ov .node .who .ava { box-shadow: 0 0 0 2px #fff; }
+
+/* полоса сверху и полоса главы при наезде */
+.top { position: fixed; left: 0; right: 0; top: 0; z-index: 10; padding: var(--pad-t) var(--pad-r) 0 var(--pad-l); pointer-events: none; display: grid; gap: 8px; justify-items: center; }
+.top .mtop { width: 100%; max-width: 640px; }
+/* карточка главы при наезде */
+.zcard { pointer-events: auto; width: min(100%, 520px); padding: 10px 12px 12px; border-radius: 18px; display: grid; gap: 10px; border-top: 4px solid var(--cc); background: var(--panel-solid); }
+.zc-head { display: flex; align-items: center; gap: 6px; }
+.zc-t { flex: 1; display: grid; gap: 1px; min-width: 0; padding-left: 4px; }
+.zc-t b { font: 400 22px/1.1 var(--f-display); letter-spacing: 0.03em; }
+.zc-t small { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zcard .rbtn { box-shadow: none; background: var(--fill); }
+.zcard .rbtn:disabled { opacity: 0.3; cursor: default; }
+.zcard .rbtn.nx .i { transform: scaleX(-1); }
+.zc-stats { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
+.zc-s { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 5px; row-gap: 6px; padding: 8px 10px; border-radius: 12px; background: var(--fill); }
+.zc-s b { font: 500 22px/1 var(--f-mono); font-variant-numeric: tabular-nums; }
+.zc-s span { font-size: 12px; color: var(--muted); }
+.zc-s .i { width: 18px; height: 18px; align-self: center; }
+.zc-s .meter { flex: 1 0 100%; height: 6px; }
+.zc-foot { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.zc-foot .folk { display: flex; flex: none; }
+.zc-foot .folk .ava { margin-left: -5px; box-shadow: 0 0 0 2px #fff; }
+.zc-foot .folk .ava:first-child { margin-left: 0; }
+.zc-new { display: flex; align-items: center; gap: 5px; min-width: 0; font: 600 12px var(--f-body); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zc-new .i { width: 14px; height: 14px; color: var(--accent-deep); flex: none; }
+
+/* «Играть» — большая, по центру внизу */
+.bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: center; padding: 0 var(--pad-r) var(--pad-b) var(--pad-l); pointer-events: none; }
+.bottom .cta { pointer-events: auto; flex: 0 1 460px; }
+.btn.go.big.cta { justify-content: flex-start; min-height: 78px; border-radius: 20px; gap: 14px; padding: 0 24px; }
+.btn.go.big.cta .i { width: 32px; height: 32px; }
+.btn.go.big.cta .cta-t b { font-size: 26px; }
+.btn.go.big.cta .cta-t small { font-size: 14px; }
+/* низкое окно: карточка главы и «Играть» — колонкой слева, карта — справа */
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) {
+  .stage > svg { height: calc(100% - var(--pad-t) - var(--pad-b) - 58px); }
+  .zoomed .stage > svg { top: calc(var(--pad-t) + 58px); left: calc(var(--pad-l) + 300px); width: calc(100% - var(--pad-l) - 300px); height: calc(100% - var(--pad-t) - var(--pad-b) - 58px); }
+  .zcard { position: fixed; left: var(--pad-l); top: calc(var(--pad-t) + 54px); width: 290px; gap: 8px; padding: 8px 10px 10px; }
+  .zc-t b { font-size: 18px; }
+  .zc-s { padding: 6px 8px; }
+  .zc-s b { font-size: 18px; }
+  .bottom { justify-content: flex-end; }
+  .bottom .cta { flex: 0 0 auto; }
+  .zoomed .bottom { left: var(--pad-l); right: auto; width: 290px; padding: 0 0 var(--pad-b); }
+  .zoomed .bottom .cta { flex: 1; }
+  .btn.go.big.cta { min-height: 64px; }
+  .btn.go.big.cta .cta-t b { font-size: 21px; }
+}
+@media (prefers-reduced-motion: reduce) { .dots .cur, .bolt { animation: none; } }
+</style>
+</head>
+<body>
+<div class="stage" id="stage"><svg id="w" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Карта острова"></svg><div class="ov" id="ov"></div></div>
+<div class="top" id="top"></div>
+<div class="bottom" id="bottom"></div>
+
+<script src="shared/chars.js"></script>
+<script src="shared/map.js"></script>
+<script>
+(function () {
+  'use strict';
+  const M = window.MAP, { CHAPTERS, LEVELS, icon } = M;
+  const svg = document.getElementById('w'), ov = document.getElementById('ov'), stage = document.getElementById('stage');
+  const A = 105, D = 20;                                           // полуширина плиты и толщина
+  // змейка по плите [u, v]: три ряда от нижнего угла к верхнему; крайние уровни стоят на самых углах плиты, чтобы при наезде кружки не слипались
+  const ROWS = [[1.05, 1.05], [0.5, 1.05], [-0.05, 1.05], [-0.05, 0.5], [0.5, 0.5], [1.05, 0.5], [1.05, -0.05], [0.5, -0.05], [-0.05, -0.05]];
+  let centers, full, vb, zoom = null, anim = null, wide = false;
+
+  // точка на плите главы: u — вправо-вниз, v — влево-вниз (как клетки в игре)
+  const pt = (ci, u, v) => { const [cx, cy] = centers[ci]; return { x: cx + (u - v) * A, y: cy + (u + v - 1) * A / 2 }; };
+  const nodePt = L => { const ch = CHAPTERS[L.ci], r = ROWS[Math.round(L.i * (ROWS.length - 1) / Math.max(1, ch.levels.length - 1))]; return pt(L.ci, r[0], r[1]); };
+
+  function layout() {
+    const r = svg.getBoundingClientRect();
+    wide = r.width / Math.max(1, r.height) > 1.1;
+    centers = wide ? [[120, 300], [320, 205], [520, 300], [720, 205]] : [[135, 590], [275, 445], [130, 300], [270, 160]];
+    const xs = centers.map(c => c[0]), ys = centers.map(c => c[1]);
+    full = [Math.min(...xs) - A - 16, Math.min(...ys) - A / 2 - 110, 0, 0];
+    full[2] = Math.max(...xs) + A + 16 - full[0]; full[3] = Math.max(...ys) + A / 2 + D + 24 - full[1];
+  }
+  const boxOf = ci => { const [cx, cy] = centers[ci]; return [cx - A * 1.1 - 40, cy - A * 0.55 - 34, A * 2.2 + 80, A * 1.1 + D + 50]; };
+
+  function draw() {
+    const cur = M.current();
+    let h = `<defs><pattern id="waves" width="60" height="24" patternUnits="userSpaceOnUse"><path d="M0 12q7.5-6 15 0t15 0 15 0 15 0" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.2"/></pattern></defs>
+      <rect x="${full[0] - 400}" y="${full[1] - 400}" width="${full[2] + 800}" height="${full[3] + 800}" fill="url(#waves)"/>`;
+
+    // плиты
+    CHAPTERS.forEach((C, ci) => {
+      const [cx, cy] = centers[ci], g = M.gate(ci), open = g === 'open';
+      h += `<g class="plate ${open ? '' : 'shut'}" data-act="${open ? 'zoom' : 'gate'}" data-ci="${ci}" style="${open ? '' : 'filter:grayscale(.85) brightness(1.05)'}">${M.plate(ci, cx, cy, A, D)}`;
+      if (!open) h += `<g opacity=".88"><ellipse cx="${cx - 30}" cy="${cy - 6}" rx="56" ry="22" fill="#eef2f6"/><ellipse cx="${cx + 34}" cy="${cy + 4}" rx="52" ry="20" fill="#e4eaf0"/><ellipse cx="${cx}" cy="${cy - 18}" rx="40" ry="20" fill="#f6f8fa"/></g>`;
+      h += '</g>';
+    });
+
+    // путь через все уровни: пройденная часть — жёлтая
+    const pts = LEVELS.map(nodePt);
+    const doneTo = cur != null ? cur : LEVELS.findIndex((_, i) => M.status(i) !== 'done');
+    const done = pts.slice(0, doneTo < 0 ? pts.length : doneTo + 1);
+    h += `<g pointer-events="none">
+      <path d="${M.curve(pts)}" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="7" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      <path d="${M.curve(pts)}" fill="none" stroke="rgba(30,50,75,.3)" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      <path d="${M.curve(done)}" fill="none" stroke="#f7c21b" stroke-width="4.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/></g>`;
+    // точки уровней на обзоре
+    h += '<g class="dots" pointer-events="none">' + LEVELS.map((L, gi) => {
+      const p = pts[gi], s = M.status(gi);
+      return s === 'done' ? `<circle cx="${p.x}" cy="${p.y}" r="5" fill="#f7c21b" stroke="#fff" stroke-width="2"/>`
+        : s === 'current' ? `<circle class="cur" cx="${p.x}" cy="${p.y}" r="7.5" fill="#fff" stroke="#f7c21b" stroke-width="3.5"/>`
+          : `<circle cx="${p.x}" cy="${p.y}" r="4" fill="#cdd5de" stroke="#fff" stroke-width="1.5"/>`;
+    }).join('') + '</g>';
+
+    // шторм над последней плитой
+    const [sx, sy] = centers[3];
+    h += `<g pointer-events="none" transform="translate(${sx + (wide ? 40 : 10)} ${sy - A / 2 - 70})">
+      <g stroke="#5a6979" stroke-width="1.5" opacity=".5">${[0, 1, 2, 3, 4, 5].map(i => `<path d="M${-50 + i * 20} 28 l-8 22"/>`).join('')}</g>
+      <path d="M-70 26 q-14-24 14-30 q4-26 34-22 q14-22 44-8 q30-6 34 22 q24 6 12 38z" fill="#3a4659"/>
+      <path class="bolt" d="M8 22l-12 22h10l-8 20 20-28h-11l8-14z" fill="#ffd23f"/>
+      <text x="0" y="-40" text-anchor="middle" font-family="Rubik Mono One, sans-serif" font-size="12" fill="#3a4659" letter-spacing=".5">БОЛЬШОЙ ШТОРМ</text></g>`;
+    svg.innerHTML = h;
+    document.body.classList.toggle('zoomed', zoom != null);
+  }
+
+  // HTML поверх SVG: подписи глав на обзоре, кружки уровней при наезде
+  function overlays() {
+    const cur = M.current(), curC = cur != null ? LEVELS[cur].ci : null;
+    let h = '';
+    CHAPTERS.forEach((C, ci) => {
+      const g = M.gate(ci), open = g === 'open';
+      const sub = open ? `${icon('star', 'on')}${M.chapterStars(ci)}/${C.levels.length * 3} · ${M.chapterPassed(ci)} из ${C.levels.length}` : `${icon('lock')}нужно ${C.need} ★`;
+      h += `<button type="button" class="plabel ${open ? '' : 'shut'} ${ci === curC ? 'here' : ''}" data-act="${open ? 'zoom' : 'gate'}" data-ci="${ci}" data-anchor="${ci}">
+        <span class="num" style="background:${C.deep}">${ci + 1}</span><span class="t"><b>${C.name}</b><small>${sub}</small></span></button>`;
+    });
+    LEVELS.forEach((L, gi) => {
+      const s = M.status(gi), b = M.badgeOf(L), boss = L.tags.some(t => t.k === 'boss');
+      h += `<button type="button" class="node ${s} ${boss ? 'boss' : ''} ${zoom === L.ci ? '' : 'hide'} ${M.st.justDone === gi ? 'fresh' : ''}" data-act="level" data-gi="${gi}" data-lv="${gi}" style="--cc:${CHAPTERS[L.ci].deep}" aria-label="${L.i + 1}. ${L.n}">
+        ${s === 'current' ? `<span class="who">${M.ava(L.who, 'sm')}</span>` : ''}${s === 'locked' ? icon('lock') : L.i + 1}${s === 'done' ? M.starsRow(M.st.stars[gi]) : ''}${b && s !== 'done' ? `<span class="bdg k-${b.k}">${icon(M.TAGS[b.k].icon)}</span>` : ''}</button>`;
+    });
+    ov.innerHTML = h;
+    place();
+  }
+  function toScreen(p) {
+    const m = svg.getScreenCTM(); if (!m) return { x: 0, y: 0 };
+    const q = svg.createSVGPoint(); q.x = p.x; q.y = p.y; const r = q.matrixTransform(m), s = stage.getBoundingClientRect();
+    return { x: r.x - s.left, y: r.y - s.top };
+  }
+  function place() {
+    for (const e of ov.querySelectorAll('[data-anchor]')) { const ci = +e.dataset.anchor, [cx, cy] = centers[ci]; const p = toScreen({ x: cx, y: cy - A / 2 - 14 }); e.style.left = p.x + 'px'; e.style.top = p.y + 'px'; }
+    for (const e of ov.querySelectorAll('[data-lv]')) { const p = toScreen(nodePt(LEVELS[+e.dataset.lv])); e.style.left = p.x + 'px'; e.style.top = p.y + 'px'; }
+  }
+  const setVB = b => { vb = b; svg.setAttribute('viewBox', b.map(v => v.toFixed(2)).join(' ')); };
+
+  function zoomTo(ci) {
+    zoom = ci;
+    const to = ci == null ? full : boxOf(ci), from = vb.slice(), t0 = performance.now(), dur = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 480;
+    cancelAnimationFrame(anim);
+    document.body.classList.toggle('zoomed', zoom != null);
+    shell(); overlays();
+    const step = now => {
+      const k = dur ? Math.min(1, (now - t0) / dur) : 1, e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+      setVB(from.map((v, i) => v + (to[i] - v) * e)); place();
+      if (k < 1) anim = requestAnimationFrame(step);
+    };
+    anim = requestAnimationFrame(step);
+  }
+
+  function shell() {
+    let z = '';
+    if (zoom != null) {
+      const C = CHAPTERS[zoom], prevOpen = zoom > 0, nextOpen = zoom < CHAPTERS.length - 1 && M.gate(zoom + 1) === 'open';
+      const cs = M.chapterStars(zoom), max = C.levels.length * 3, pieces = C.levels.flatMap(L => L.tags.filter(t => t.k === 'new').map(t => t.t));
+      // карточка главы: название, звёзды с полосой, сколько пройдено, жители и новые фигуры
+      z = `<div class="zcard card" style="--cc:${C.deep}">
+        <div class="zc-head">
+          <button type="button" class="rbtn" data-act="out" aria-label="Весь остров">${icon('back')}</button>
+          <div class="zc-t"><span class="ch">Глава ${zoom + 1} из ${CHAPTERS.length}</span><b>${C.name}</b><small>${C.place}</small></div>
+          <button type="button" class="rbtn" data-act="zoom" data-ci="${zoom - 1}" aria-label="Прошлая глава" ${prevOpen ? '' : 'disabled'}>${icon('back')}</button>
+          <button type="button" class="rbtn nx" data-act="${nextOpen ? 'zoom' : 'gate'}" data-ci="${zoom + 1}" aria-label="Следующая глава" ${zoom < CHAPTERS.length - 1 ? '' : 'disabled'}>${icon('back')}</button>
+        </div>
+        <div class="zc-stats">
+          <div class="zc-s">${icon('star', 'on')}<b>${cs}</b><span>/ ${max}</span><div class="meter" style="--p:${cs / max}"><span></span></div></div>
+          <div class="zc-s"><b>${M.chapterPassed(zoom)}</b><span>из ${C.levels.length} уровней</span></div>
+        </div>
+        <div class="zc-foot"><span class="folk">${C.people.map(w => M.ava(w, 'sm')).join('')}</span>${pieces.length ? `<span class="zc-new">${icon('new')}${pieces.join(', ')}</span>` : ''}</div>
+      </div>`;
+    }
+    document.getElementById('top').innerHTML = M.topbar() + z;
+    document.getElementById('bottom').innerHTML = M.ctaButton('big');
+  }
+
+  let firstRender = true;
+  function render() {
+    layout();
+    if (firstRender) { setVB(full); firstRender = false; }
+    // после «Играть» камера едет к главе следующего уровня, если она сменилась
+    const cur = M.current();
+    if (M.st.justDone != null && zoom != null && cur != null && LEVELS[cur].ci !== zoom) { const jd = M.st.justDone; draw(); zoomTo(LEVELS[cur].ci); M.st.justDone = jd; return; }
+    if (zoom != null && M.gate(zoom) !== 'open') zoom = null;
+    setVB(zoom == null ? full : boxOf(zoom));
+    draw(); shell(); overlays();
+  }
+
+  M.init({
+    key: 'B', name: 'Остров', sub: 'острова на пути шторма',
+    desc: 'Четыре плиты-главы цепочкой через море к шторму — такие же плиты, как поле в игре. Весь путь виден сразу, без прокрутки. Тап по главе — наезд, на плите уровни змейкой.',
+    tips: ['Тап по плите или подписи — наезд на главу; ← — снова весь остров; ‹ › — соседние главы.', 'На обзоре точки — уровни: жёлтые пройдены, белая мигает — следующий.', 'Закрытые главы под облаками; тап — что нужно, чтобы открыть.'],
+    render, loading: true,
+    onChapter(ci) { zoomTo(ci); },
+    onResize() { layout(); setVB(zoom == null ? full : boxOf(zoom)); draw(); shell(); overlays(); },
+    onAct(a, b) {
+      if (a === 'zoom') zoomTo(+b.dataset.ci);
+      else if (a === 'out') zoomTo(null);
+    },
+  });
+})();
+</script>
+</body>
+</html>

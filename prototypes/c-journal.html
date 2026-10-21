@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Порыв — вариант C</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="shared/base.css">
+<style>
+/* C «Журнал»: сверху стеклянная полоса (меню, уровень, ветер, описание), под ней справа — два круга: подсказка и отмена.
+   Снизу (на ПК — справа) — «журнал смотрителя», сплошная бумажная панель: фигуры и «Ветер!». */
+.c { --jw: 340px; }
+.c .journal { position: absolute; top: 0; right: 0; bottom: 0; width: var(--jw); display: flex; flex-direction: column; gap: 12px;
+  padding: var(--pad-t) var(--pad-r) var(--pad-b) 18px; background-color: var(--paper);
+  background-image: repeating-linear-gradient(180deg, transparent 0 27px, var(--paper-line) 27px 28px);
+  border-left: 1px solid var(--paper-line); box-shadow: -10px 0 30px rgba(30, 50, 75, 0.12); }
+.c .jl { display: flex; align-items: center; gap: 8px; font: 500 10px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+.c .jl::after { content: ""; flex: 1; border-top: 1px dashed var(--paper-line); }
+.c section { min-width: 0; }
+.c .inv { flex-direction: column; gap: 6px; }
+.c .piece { grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-areas: "ic nm cnt" "ic sp cnt"; background: rgba(255, 255, 255, 0.75); border: 1px solid var(--paper-line); cursor: grab; }
+.c .piece canvas { grid-area: ic; }
+.c .piece .nm { grid-area: nm; }
+.c .piece .sp { grid-area: sp; display: block; font: 500 11px var(--f-mono); color: var(--muted); white-space: nowrap; }
+.c .piece .cnt { grid-area: cnt; font-size: 14px; }
+.c .piece[aria-pressed="true"] { background: #fff6d6; border-color: #d9a400; }
+.c .jacts { margin-top: auto; display: grid; }
+.c .jacts .go { width: 100%; min-height: calc(var(--tap) + 12px); font-size: 17px; }
+.c #talk-slot .talk, .c #result-slot .result { background: #fff; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; border: 1px solid var(--paper-line); max-width: none; width: auto; }
+.c #talk-slot .talk { border-left: 3px solid var(--accent); }
+.c .grip { display: none; }
+
+/* верх: полоса и под ней два круга; на ПК — только над полем, левее журнала */
+.c .ctop { position: absolute; top: var(--pad-t); left: var(--pad-l); right: calc(var(--jw) + 12px); display: grid; gap: 8px; pointer-events: none; }
+.c .topbar { padding: 8px 12px 8px 8px; display: grid; gap: 4px 12px; align-items: center;
+  grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "menu lvl wind" "menu hint legend"; }
+.c .topbar .fbtn { grid-area: menu; align-self: start; }
+.c .topbar .lvl { grid-area: lvl; }
+.c .topbar .wind-n { grid-area: wind; justify-self: end; }
+.c .topbar .legend { grid-area: legend; width: 116px; align-self: start; }
+.c .topbar .hint { grid-area: hint; }
+.fbtn { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; padding: 0; border: 1px solid var(--line); cursor: pointer;
+  background: var(--panel); color: var(--ink); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 14px rgba(30, 50, 75, 0.16); font: 600 18px var(--f-body); }
+.c .topbar .fbtn { box-shadow: none; background: var(--fill); }
+.fbtn svg { width: 22px; height: 22px; }
+.fbtn:disabled { opacity: 0.4; cursor: default; }
+.c .fcircles { justify-self: end; display: flex; align-items: flex-start; gap: 10px; }
+.c .hintwrap { display: grid; justify-items: center; gap: 3px; }
+.c .f-hint { width: 60px; height: 60px; font-size: 26px; background: var(--panel-solid); border: 2px solid var(--accent); }
+.c .f-undo { margin-top: 8px; }
+.c .f-cap { display: grid; justify-items: center; gap: 1px; font: 600 11px var(--f-body); color: var(--ink); background: var(--panel); border-radius: 8px; padding: 2px 6px 3px;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.c .f-cap .ad { font: 500 9px var(--f-mono); color: var(--muted); }
+.c .topbar .fbtn { border-radius: 12px; }
+
+/* низкое окно: полоса в одну строку, описание — одной строкой с многоточием; журнал уже */
+[data-layout="short"] .c { --jw: 300px; }
+[data-layout="short"] .c .topbar { grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: "menu lvl hint wind"; padding: 5px 10px 5px 5px; }
+[data-layout="short"] .c .topbar .legend { display: none; }
+[data-layout="short"] .c .topbar .hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[data-layout="short"] .c .topbar .lvl .ch { display: none; }
+[data-layout="short"] .c .f-hint { width: 50px; height: 50px; font-size: 22px; }
+[data-layout="short"] .c .fcircles { position: absolute; right: 0; top: calc(100% + 8px); }
+[data-layout="short"] .c .journal { gap: 8px; padding-left: 14px; }
+[data-layout="short"] .c .inv { display: grid; grid-template-columns: 1fr 1fr; }
+[data-layout="short"] .c .piece { grid-template-columns: 36px minmax(0, 1fr); grid-template-areas: "ic nm" "ic sp"; padding: 3px 26px 3px 3px; }
+[data-layout="short"] .c .piece canvas { width: 36px; height: 32px; }
+[data-layout="short"] .c .piece .cnt { position: absolute; top: 3px; right: 6px; font-size: 11px; }
+[data-layout="short"] .c .piece .sp { font-size: 10px; }
+[data-layout="short"] .c .go .kbd { display: none; }
+[data-layout="short"] .c .jacts .go { min-height: var(--tap); }
+
+/* телефон вертикально: полоса на всю ширину сверху, журнал — шторка снизу */
+[data-layout="portrait"] .c .ctop { right: var(--pad-r); }
+[data-layout="portrait"] .c .journal { top: auto; left: 0; width: auto; border-left: 0; border-top: 1px solid var(--paper-line); border-radius: 18px 18px 0 0;
+  padding: 6px var(--pad-r) var(--pad-b) var(--pad-l); gap: 10px; box-shadow: 0 -10px 30px rgba(30, 50, 75, 0.14);
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "grip" "talk" "inv" "res" "acts"; }
+[data-layout="portrait"] .c .grip { display: block; grid-area: grip; justify-self: center; width: 40px; height: 4px; border-radius: 2px; background: var(--paper-line); }
+[data-layout="portrait"] .c .jinv .jl { display: none; }
+[data-layout="portrait"] .c #talk-slot { grid-area: talk; }
+[data-layout="portrait"] .c .jinv { grid-area: inv; }
+[data-layout="portrait"] .c #result-slot { grid-area: res; }
+[data-layout="portrait"] .c .inv { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+[data-layout="portrait"] .c .piece { grid-template-columns: 1fr; grid-template-areas: "ic" "nm" "sp"; justify-items: center; text-align: center; padding: 6px 2px; row-gap: 1px; }
+[data-layout="portrait"] .c .piece .nm { font-size: 12px; }
+[data-layout="portrait"] .c .piece .sp { font-size: 10px; }
+[data-layout="portrait"] .c .piece .cnt { position: absolute; top: 4px; right: 6px; font-size: 12px; }
+[data-layout="portrait"] .c .jacts { grid-area: acts; margin-top: 0; }
+[data-layout="portrait"] .c .go .kbd { display: none; }
+
+/* больше четырёх фигур: без прокрутки (Яндекс, п. 1.10.4) — сеткой в два ряда, плитка «иконка слева, подписи справа» */
+.c .inv[data-n="6"] .piece { grid-template-columns: 34px minmax(0, 1fr); grid-template-areas: "ic nm" "ic sp"; padding: 4px 22px 4px 3px; text-align: left; justify-items: start; }
+.c .inv[data-n="6"] .piece canvas { width: 34px; height: 30px; }
+.c .inv[data-n="6"] .piece .cnt { position: absolute; top: 3px; right: 5px; font-size: 11px; }
+.c .inv[data-n="6"] .piece .nm { font-size: 12px; }
+.c .inv[data-n="6"] .piece .sp { font-size: 10px; }
+[data-layout="portrait"] .c .inv[data-n="6"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+[data-layout="wide"] .c .inv[data-n="6"] { display: grid; grid-template-columns: 1fr 1fr; }
+</style>
+</head>
+<body class="proto-left">
+<div class="frame">
+  <canvas id="c"></canvas>
+  <div class="hud c">
+    <div class="ctop">
+      <div class="topbar card" data-block="t">
+        <button class="fbtn" type="button" data-act="menu" aria-label="Меню и пауза">☰</button>
+        <div class="lvl"><span class="ch">Деревня · 8 из 8</span><b>Перед бурей</b></div>
+        <div class="wind-n"><span class="arrow" data-wind-arrow aria-hidden="true"></span><b>22</b><span class="u">м/с</span></div>
+        <div class="legend" aria-label="Цвет поля — скорость ветра"><div class="bar"></div><div class="ticks"><span>0</span><span>14</span><span>28 м/с</span></div></div>
+        <p class="hint">Две хижины и дом. Фигуры влияют друг на друга — пробуй.</p>
+      </div>
+      <div class="fcircles" data-block="none" data-show="build run">
+        <button class="fbtn f-undo" type="button" data-act="undo" aria-label="Отменить" title="Отменить (Alt+Z)" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+        <div class="hintwrap">
+          <button class="fbtn f-hint" type="button" data-act="hint" aria-label="Подсказка за просмотр рекламы: одна фигура встанет на место">💡</button>
+          <span class="f-cap" aria-hidden="true">Подсказка<span class="ad">▶ реклама</span></span>
+        </div>
+      </div>
+    </div>
+    <aside class="journal" data-block="auto">
+      <span class="grip" aria-hidden="true"></span>
+      <div id="talk-slot"></div>
+      <section class="jinv" data-show="build run">
+        <div class="jl">Фигуры</div>
+        <div class="inv" id="inv"></div>
+      </section>
+      <div id="result-slot"></div>
+      <div class="jacts" data-show="build run">
+        <button class="btn go" type="button" data-act="go"><span class="lbl">Ветер!</span> <span class="kbd">Пробел</span></button>
+      </div>
+    </aside>
+  </div>
+</div>
+<script src="shared/island.js"></script>
+<script>
+Proto.init({ key: 'C', name: 'Журнал', inv: 6, invToggle: true, desc: 'Сверху — полоса, как в варианте A: меню, уровень, ветер и описание; под ней справа — подсказка и отмена. Снизу (на ПК — справа) — «журнал смотрителя»: фигуры и «Ветер!». Остров крутится свайпом. Ниже можно переключить вид, наклон камеры, лупу, сцену и число фигур.' });
+</script>
+</body>
+</html>

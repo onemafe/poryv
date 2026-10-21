@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Порыв — карта C · Журнал</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="shared/base.css">
+<link rel="stylesheet" href="shared/map.css">
+<style>
+/* C «Журнал»: журнал смотрителя, страница = глава. Закладки сверху, страницы листаются вбок.
+   На странице — рисунок посёлка, жители и уровни змейкой по сетке (1-2-3, потом 6-5-4…). Всё помещается без прокрутки. */
+.app { position: fixed; inset: 0; display: grid; grid-template-rows: auto auto 1fr auto; gap: 8px; padding: var(--pad-t) 0 var(--pad-b); }
+.app > .mtop { padding: 0 var(--pad-r) 0 var(--pad-l); max-width: 960px; width: 100%; margin: 0 auto; }
+.tabs { display: flex; gap: 4px; padding: 0 var(--pad-r) 0 var(--pad-l); max-width: 960px; width: 100%; margin: 0 auto; overflow: hidden; }
+.tab { flex: 1 1 0; min-width: 0; min-height: 40px; display: flex; align-items: center; justify-content: center; gap: 5px; border: 0; border-radius: 10px 10px 0 0; padding: 0 6px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.45); color: var(--muted); font: 600 12px var(--f-body); border-bottom: 3px solid var(--tc); white-space: nowrap; }
+.tab .i { width: 13px; height: 13px; flex: none; }
+.tab span { overflow: hidden; text-overflow: ellipsis; }
+.tab[aria-current="true"] { background: var(--paper); color: var(--ink); }
+.tab.shut { opacity: 0.6; }
+
+.pages { display: flex; gap: 14px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; padding: 0 var(--pad-r) 0 var(--pad-l); scrollbar-width: none; overscroll-behavior-x: contain; min-height: 0; }
+.pages::-webkit-scrollbar { display: none; }
+.page { position: relative; flex: 0 0 100%; scroll-snap-align: center; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 14px 14px 16px;
+  background-color: var(--paper); background-image: repeating-linear-gradient(180deg, transparent 0 27px, var(--paper-line) 27px 28px);
+  border-radius: 4px 14px 14px 4px; box-shadow: inset 6px 0 10px -6px rgba(90, 70, 40, 0.25), 0 10px 30px rgba(30, 50, 75, 0.15); }
+.ph { display: flex; gap: 10px; align-items: flex-start; }
+.ph > div:first-child { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.ph h2 { margin: 0; font: 400 22px/1.1 var(--f-display); letter-spacing: 0.03em; }
+.ph small { color: var(--muted); font-size: 12px; }
+.ps { display: grid; gap: 5px; justify-items: end; width: 96px; }
+.ps b { display: flex; align-items: center; gap: 3px; font: 500 15px var(--f-mono); }
+.ps b .i { width: 16px; height: 16px; }
+.ps .meter { width: 100%; }
+.vign { position: relative; height: 54px; border-bottom: 2px solid rgba(90, 70, 40, 0.25); display: flex; align-items: flex-end; justify-content: space-around; flex: none; }
+.vign .pr { display: block; }
+.vign .pr svg { display: block; width: 100%; height: auto; }
+.folk { display: flex; align-items: center; gap: 6px; flex: none; }
+.folk .ch { margin-right: 4px; }
+.folk .ava { box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--ring); }
+
+/* уровни змейкой по сетке */
+.lvls { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(var(--cols), 1fr); grid-auto-rows: minmax(0, 1fr); gap: 10px 14px; align-content: center; }
+.lvls svg.links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.cell { position: relative; z-index: 1; display: grid; justify-items: center; align-content: center; gap: 3px; padding: 8px 4px 9px; min-height: 0; border-radius: 12px; cursor: pointer;
+  border: 1.5px solid rgba(90, 70, 40, 0.25); background: #fff; color: var(--ink); font: inherit; box-shadow: 0 3px 0 rgba(90, 70, 40, 0.15); max-height: 112px; align-self: center; }
+.cell .n { font: 500 22px/1 var(--f-mono); }
+.cell .nm { font: 600 11px/1.2 var(--f-body); text-align: center; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 100%; }
+.cell .srow .i { width: 13px; height: 13px; }
+.cell .bdg { position: absolute; right: 5px; top: 5px; color: var(--accent-deep); }
+.cell .bdg .i { width: 14px; height: 14px; }
+.cell .bdg.k-boss { color: #3a4659; }
+.cell.current { background: var(--accent); border-color: var(--accent-deep); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--accent-deep), 0 6px 16px rgba(150, 110, 0, 0.3); }
+.cell.current .who { position: absolute; left: -9px; top: -9px; }
+.cell.current .who .ava { box-shadow: 0 0 0 2px #fff; }
+.cell.current .go-l { font: 400 10px var(--f-display); letter-spacing: 0.06em; }
+.cell.locked { background: var(--paper); border-style: dashed; color: rgba(23, 33, 44, 0.4); box-shadow: none; }
+.cell.locked .i { width: 14px; height: 14px; }
+.cell.fresh { animation: pop 0.6s ease-out; }
+.cell:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+/* закрытая глава: страница бледнее, поверх — что нужно */
+.page.shut .ph, .page.shut .vign, .page.shut .folk, .page.shut .lvls { filter: grayscale(0.9); opacity: 0.45; }
+.shutnote { position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%); z-index: 3; width: min(280px, 86%); display: grid; gap: 8px; justify-items: center; text-align: center;
+  padding: 16px; border-radius: 14px; background: #fff; box-shadow: 0 10px 30px rgba(30, 50, 75, 0.22); }
+.shutnote .gate-ico { width: 46px; height: 46px; }
+.shutnote b { font: 400 15px var(--f-display); letter-spacing: 0.03em; }
+.shutnote p { margin: 0; font-size: 13px; color: var(--muted); }
+.shutnote .meter { width: 100%; }
+
+.bottom { display: flex; justify-content: center; padding: 0 var(--pad-r) 0 var(--pad-l); }
+.bottom .cta { flex: 0 1 380px; justify-content: flex-start; }
+
+/* широкое окно: страница главы по центру, соседние видны по краям */
+@media (min-width: 880px) and (min-height: 560px) {
+  .pages { justify-content: safe center; }
+  .page { flex-basis: 430px; }
+  .tabs { max-width: 874px; }
+}
+/* низкое окно: страница в две колонки, «Играть» — слева внизу под сведениями главы */
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) {
+  .app { grid-template-rows: auto auto 1fr; gap: 6px; }
+  .tab { min-height: 34px; }
+  .page { display: grid; grid-template-columns: minmax(200px, 34%) 1fr; grid-template-rows: auto auto auto 1fr; column-gap: 18px; row-gap: 8px; padding: 12px 14px; }
+  .page > .ph, .page > .vign, .page > .folk { grid-column: 1; }
+  .page > .lvls { grid-column: 2; grid-row: 1 / -1; }
+  .vign { height: 44px; }
+  .ph h2 { font-size: 18px; }
+  .cell .nm { display: none; }
+  .bottom { position: fixed; left: calc(var(--pad-l) + 14px); bottom: calc(var(--pad-b) + 12px); z-index: 5; padding: 0; justify-content: flex-start; width: min(34%, 300px); }
+  .bottom .cta { flex: 1; }
+  .shutnote { top: 50%; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="top"></div>
+  <nav class="tabs" id="tabs" aria-label="Главы"></nav>
+  <div class="pages" id="pages"></div>
+  <div class="bottom" id="bottom"></div>
+</div>
+
+<script src="shared/chars.js"></script>
+<script src="shared/map.js"></script>
+<script>
+(function () {
+  'use strict';
+  const M = window.MAP, { CHAPTERS, LEVELS, icon } = M;
+  const pagesEl = document.getElementById('pages'), tabsEl = document.getElementById('tabs');
+  const VIGN = { village: ['tree', 'hut', 'fence', 'house', 'tree', 'rock'], city: ['house', 'tower', 'block', 'chimney', 'tower', 'block'],
+    cape: ['light', 'mill', 'pine', 'mill', 'rock', 'mill'], pass: ['pine', 'mount', 'pine', 'hut', 'mount', 'pine'] };
+  let page = null;
+  const low = () => matchMedia('(max-height: 520px) and (min-aspect-ratio: 1/1)').matches;
+
+  function render() {
+    const cur = M.current(), curC = cur != null ? LEVELS[cur].ci : (() => { const g = CHAPTERS.findIndex((_, ci) => M.gate(ci) === 'stars'); return g >= 0 ? g : CHAPTERS.length - 1; })();
+    const cols = low() ? 5 : 3;
+    document.getElementById('top').innerHTML = M.topbar();
+    document.getElementById('bottom').innerHTML = M.ctaButton();
+
+    tabsEl.innerHTML = CHAPTERS.map((C, ci) => `<button type="button" class="tab ${M.gate(ci) === 'open' ? '' : 'shut'}" data-act="page" data-ci="${ci}" style="--tc:${C.deep}">${M.gate(ci) === 'open' ? '' : icon('lock')}<span>${C.name}</span></button>`).join('');
+
+    pagesEl.innerHTML = CHAPTERS.map((C, ci) => {
+      const g = M.gate(ci), open = g === 'open', cs = M.chapterStars(ci), max = C.levels.length * 3;
+      const cells = C.levels.map(L => {
+        const gi = L.gi, s = M.status(gi), b = M.badgeOf(L), r = Math.floor(L.i / cols), c = r % 2 ? cols - (L.i % cols) : L.i % cols + 1;
+        return `<button type="button" class="cell ${s} ${M.st.justDone === gi ? 'fresh' : ''}" data-act="level" data-gi="${gi}" data-i="${L.i}" style="grid-row:${r + 1};grid-column:${c}" aria-label="${L.i + 1}. ${L.n}">
+          ${s === 'current' ? `<span class="who">${M.ava(L.who, 'sm')}</span>` : ''}
+          <span class="n">${s === 'locked' ? icon('lock') : L.i + 1}</span><span class="nm">${L.n}</span>
+          ${s === 'done' ? M.starsRow(M.st.stars[gi]) : s === 'current' ? '<span class="go-l">ИГРАТЬ</span>' : ''}
+          ${b && s !== 'done' ? `<span class="bdg k-${b.k}" title="${M.TAGS[b.k].label(b)}">${icon(M.TAGS[b.k].icon)}</span>` : ''}</button>`;
+      }).join('');
+      const vign = VIGN[C.key].map((k, i) => `<span class="pr" style="width:${M.PROPW[k] * (k === 'mount' ? 0.5 : 0.75)}px">${M.PROPS[k]}</span>`).join('');
+      const folk = C.people.map(w => M.ava(w, 'sm')).join('');
+      const need = C.need - M.total();
+      const shut = open ? '' : `<div class="shutnote"><span class="gate-ico">${icon('lock')}</span><b>Глава закрыта</b>
+        <p>${g === 'locked' ? `Пройди главу «${CHAPTERS[ci - 1].name}» и собери ${C.need} ★` : `Нужно ${C.need} ★ — не хватает ${need}`}</p>
+        <div class="meter" style="--p:${Math.min(1, M.total() / C.need)}"><span></span></div>
+        <button type="button" class="btn" data-act="gate" data-ci="${ci}">${g === 'stars' ? 'Где добрать звёзды' : 'Подробнее'}</button></div>`;
+      return `<section class="page ${open ? '' : 'shut'}" data-ci="${ci}" aria-label="Глава ${ci + 1}: ${C.name}">
+        <header class="ph"><div><span class="ch">Глава ${ci + 1}</span><h2>${C.name}</h2><small>${C.place}</small></div>
+          <div class="ps"><b>${icon('star', 'on')}${cs}<span class="ch">/${max}</span></b><div class="meter" style="--p:${cs / max}"><span></span></div><span class="ch">${M.chapterPassed(ci)} из ${C.levels.length}</span></div></header>
+        <div class="vign" aria-hidden="true">${vign}</div>
+        <div class="folk"><span class="ch">Жители</span>${folk}</div>
+        <div class="lvls" style="--cols:${cols}"><svg class="links" aria-hidden="true"></svg>${cells}</div>
+        ${shut}</section>`;
+    }).join('');
+
+    links();
+    // при первом показе — страница текущей главы; после «Играть» — та, где следующий уровень
+    const target = page == null || M.st.justDone != null ? curC : page;
+    show(target, page == null ? 'auto' : 'smooth');
+  }
+
+  // линии змейки между клетками — по реальным местам клеток
+  function links() {
+    for (const lv of pagesEl.querySelectorAll('.lvls')) {
+      const box = lv.getBoundingClientRect(), cells = [...lv.querySelectorAll('.cell')].sort((a, b) => a.dataset.i - b.dataset.i);
+      const pts = cells.map(c => { const r = c.getBoundingClientRect(); return [r.left - box.left + r.width / 2, r.top - box.top + r.height / 2, c.classList.contains('done') || c.classList.contains('current')]; });
+      let d = '', dd = '';
+      pts.forEach((p, i) => { if (i) { d += `M${pts[i - 1][0]},${pts[i - 1][1]}L${p[0]},${p[1]}`; if (p[2]) dd += `M${pts[i - 1][0]},${pts[i - 1][1]}L${p[0]},${p[1]}`; } });
+      lv.querySelector('svg').innerHTML = `<path d="${d}" stroke="rgba(90,70,40,.35)" stroke-width="3" stroke-dasharray="3 7" stroke-linecap="round" fill="none"/><path d="${dd}" stroke="#f7c21b" stroke-width="5" stroke-linecap="round" fill="none"/>`;
+    }
+  }
+
+  function show(ci, behavior) {
+    page = ci;
+    const p = pagesEl.children[ci];
+    if (p) pagesEl.scrollTo({ left: p.offsetLeft - (pagesEl.clientWidth - p.offsetWidth) / 2, behavior });
+    mark();
+  }
+  function mark() { [...tabsEl.children].forEach((t, i) => t.setAttribute('aria-current', String(i === page))); }
+  // какая страница сейчас ближе к центру — та и выбрана в закладках
+  let st;
+  pagesEl.addEventListener('scroll', () => { clearTimeout(st); st = setTimeout(() => {
+    const mid = pagesEl.scrollLeft + pagesEl.clientWidth / 2; let best = 0, bd = Infinity;
+    [...pagesEl.children].forEach((p, i) => { const d = Math.abs(p.offsetLeft + p.offsetWidth / 2 - mid); if (d < bd) { bd = d; best = i; } });
+    page = best; mark();
+  }, 60); }, { passive: true });
+
+  M.init({
+    key: 'C', name: 'Журнал', sub: 'журнал смотрителя',
+    desc: 'Журнал смотрителя: страница = глава. Закладки сверху, страницы листаются вбок. На странице — посёлок, жители и уровни змейкой по сетке. Всё помещается без прокрутки, на широком окне рядом видны соседние главы.',
+    tips: ['Листай страницы пальцем или жми закладки.', 'Сетка змейкой: 1-2-3, потом 6-5-4, потом 7-8-9. На низком окне — 5 в ряд, названия только в карточке.', 'На закрытой главе — что нужно и где добрать звёзды.'],
+    render,
+    onResize() { render(); },
+    onAct(a, b) { if (a === 'page') show(+b.dataset.ci, 'smooth'); },
+  });
+})();
+</script>
+</body>
+</html>

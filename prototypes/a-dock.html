@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Порыв — вариант A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="shared/base.css">
+<style>
+/* A «Док»: сведения — полосой сверху, фигуры и действия — доком снизу. На низком окне док разъезжается по бокам. */
+.a { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+.a .lvlbox { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.a .mid { grid-row: 2; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; gap: 8px; min-height: 0; }
+.a .cam { display: flex; gap: 6px; }
+.a .cam .btn { background: var(--panel); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.a #talk-slot { align-self: stretch; display: flex; justify-content: center; }
+.a .piece .cnt { position: absolute; top: 3px; right: 6px; }
+.a .acts { display: flex; align-items: center; gap: 6px; }
+.a .acts .go { margin-left: auto; }
+.a .hintbtn { flex-direction: column; gap: 1px; line-height: 1.1; padding: 3px 12px; }
+
+/* телефон вертикально: одна полоса сверху, один док снизу */
+[data-layout="portrait"] .a .top { grid-row: 1; padding: 8px 10px; display: grid; gap: 6px 12px; align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "lvl wind" "hint legend"; }
+[data-layout="portrait"] .a .top > .card { background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+[data-layout="portrait"] .a .lvlbox { grid-area: lvl; }
+[data-layout="portrait"] .a .meteo { display: contents; }
+[data-layout="portrait"] .a .wind-n { grid-area: wind; justify-self: end; }
+[data-layout="portrait"] .a .legend { grid-area: legend; width: 104px; align-self: start; }
+[data-layout="portrait"] .a .hint { grid-area: hint; }
+[data-layout="portrait"] .a .dock { grid-row: 3; padding: 8px; display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
+[data-layout="portrait"] .a .go .kbd { display: none; }
+[data-layout="portrait"] .a .dock > .card { background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+[data-layout="portrait"] .a .inv { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+[data-layout="portrait"] .a .piece { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 6px 2px 6px; row-gap: 2px; }
+[data-layout="portrait"] .a .piece canvas { grid-row: auto; }
+[data-layout="portrait"] .a .piece .nm { font-size: 12px; }
+[data-layout="portrait"] .a .rot .tx { display: none; }
+[data-layout="portrait"] .a .rot { width: var(--tap); padding: 0; font-size: 17px; }
+
+/* низкое окно (телефон горизонтально, окно VK на ПК): фигуры — колонкой слева, действия — справа внизу */
+[data-layout="short"] .a { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr) auto; }
+[data-layout="short"] .a .top, [data-layout="short"] .a .dock { display: contents; }
+[data-layout="short"] .a .lvlbox { grid-area: 1 / 1 / 2 / 3; justify-self: start; padding: 6px 12px 6px 6px; }
+[data-layout="short"] .a .meteo { grid-area: 1 / 3; padding: 8px 10px; display: grid; gap: 4px; justify-self: end; max-width: 250px; }
+[data-layout="short"] .a .legend { width: 130px; }
+[data-layout="short"] .a .mid { grid-area: 2 / 2 / 4 / 3; align-items: center; }
+[data-layout="short"] .a .invbox { grid-area: 2 / 1 / 4 / 2; align-self: start; padding: 6px; }
+[data-layout="short"] .a .inv { flex-direction: column; }
+[data-layout="short"] .a .piece { padding-right: 32px; }
+[data-layout="short"] .a .acts { grid-area: 2 / 3 / 4 / 4; align-self: end; padding: 6px; display: grid; justify-items: stretch; }
+[data-layout="short"] .a .acts .go { margin-left: 0; }
+[data-layout="short"] .proto-tab { --proto-top: 30%; }
+
+/* широкое окно: карточки по углам сверху, док по центру снизу (как сейчас в игре) */
+[data-layout="wide"] .a { grid-template-columns: minmax(0, 1fr) auto; }
+[data-layout="wide"] .a .top { display: contents; }
+[data-layout="wide"] .a .lvlbox { grid-area: 1 / 1; justify-self: start; align-self: start; padding: 8px 14px 8px 8px; }
+[data-layout="wide"] .a .meteo { grid-area: 1 / 2; padding: 10px 14px; display: grid; gap: 6px; max-width: 290px; }
+[data-layout="wide"] .a .legend { width: 190px; }
+[data-layout="wide"] .a .mid { grid-area: 2 / 1 / 3 / 3; }
+[data-layout="wide"] .a .dockrow { grid-area: 3 / 1 / 4 / 3; justify-self: center; width: min(100%, 980px); display: grid; gap: 8px; padding: 8px; grid-template-columns: minmax(0, 1fr); }
+[data-layout="wide"] .a .dockrow > .card { background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+[data-layout="wide"] .a .inv { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (min-width: 1200px) { [data-layout="wide"] .a .piece .sp { display: block; } [data-layout="wide"] .a .piece { padding-right: 34px; } }
+</style>
+</head>
+<body>
+<div class="frame">
+  <canvas id="c"></canvas>
+  <div class="hud a">
+    <div class="top card" data-block="auto">
+      <div class="lvlbox card" data-block="auto">
+        <button class="btn icon" type="button" data-act="menu" aria-label="Меню и пауза">☰</button>
+        <div class="lvl"><span class="ch">Деревня · 8 из 8</span><b>Перед бурей</b></div>
+      </div>
+      <div class="meteo card" data-block="auto">
+        <div class="wind-n"><span class="arrow" data-wind-arrow aria-hidden="true"></span><b>22</b><span class="u">м/с, западный</span></div>
+        <div class="legend" aria-label="Цвет поля — скорость ветра"><div class="bar"></div><div class="ticks"><span>0</span><span>14</span><span>28 м/с</span></div></div>
+        <p class="hint">Синее на поле — тихо, красное — дует. Дома должны оказаться в синем.</p>
+      </div>
+    </div>
+
+    <div class="mid" data-block="none">
+      <div class="cam">
+        <button class="btn icon" type="button" data-act="camL" title="Повернуть остров (Q)" aria-label="Повернуть остров влево">⟲</button>
+        <button class="btn icon" type="button" data-act="camR" title="Повернуть остров (E)" aria-label="Повернуть остров вправо">⟳</button>
+      </div>
+      <div id="talk-slot"></div>
+    </div>
+
+    <div class="dock dockrow card" data-block="auto">
+      <div class="invbox card" data-block="auto" data-drop><div class="inv" id="inv"></div></div>
+      <div class="acts card" data-block="auto">
+        <button class="btn rot sel-only" type="button" data-act="rot" aria-label="Повернуть фигуру">↻<span class="tx"> Повернуть</span> <span class="kbd">R</span></button>
+        <button class="btn hintbtn" type="button" data-act="hint"><span>💡 Подсказка</span><span class="ad">▶ реклама</span></button>
+        <span class="run-time" data-run-time data-show="run" hidden></span>
+        <button class="btn go" type="button" data-act="go"><span class="lbl">Ветер!</span> <span class="kbd">Пробел</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="shared/island.js"></script>
+<script>
+Proto.init({ key: 'A', name: 'Док', desc: 'Развитие текущего экрана. Сведения об уровне — полосой сверху, фигуры и «Ветер!» — доком снизу, под большим пальцем. На низком окне док разъезжается: фигуры колонкой слева, действия справа.' });
+</script>
+</body>
+</html>

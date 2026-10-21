@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Порыв — карта A · Тропа</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="shared/base.css">
+<link rel="stylesheet" href="shared/map.css">
+<style>
+/* A «Тропа»: змейка уровней снизу вверх — от метеостанции через четыре главы к Большому шторму.
+   Карта прокручивается по вертикали; полоса сверху и «Играть» снизу стоят на месте. */
+.scroller { position: fixed; inset: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.scroller::-webkit-scrollbar { display: none; }
+.trail { position: relative; width: 100%; }
+.trail svg.path { position: absolute; left: 0; top: 0; pointer-events: none; }
+.band { position: absolute; left: 0; right: 0; }
+.band.fog { -webkit-backdrop-filter: grayscale(0.8) blur(1px); backdrop-filter: grayscale(0.8) blur(1px); background: rgba(223, 231, 238, 0.45); }
+.prop { position: absolute; pointer-events: none; transform: translate(-50%, -100%); }
+.prop svg { display: block; width: 100%; height: auto; }
+
+/* табличка главы: стоит на тропе перед первым уровнем главы */
+.sign { position: absolute; transform: translate(-50%, -50%); z-index: 2; display: grid; justify-items: center; gap: 6px; }
+.sign .board { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 14px; background: #fff; box-shadow: 0 6px 20px rgba(30, 50, 75, 0.18); border: 0; cursor: pointer; color: var(--ink); text-align: left; font: inherit; }
+.sign .num { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; font: 400 15px var(--f-display); flex: none; }
+.sign .t { display: grid; line-height: 1.15; }
+.sign .t b { font: 400 15px var(--f-display); letter-spacing: 0.04em; }
+.sign .t small { font: 500 11px var(--f-mono); color: var(--muted); display: flex; gap: 4px; align-items: center; white-space: nowrap; }
+.sign .t small .i { width: 12px; height: 12px; }
+.sign .folk { display: flex; }
+.sign .folk .ava { margin-left: -6px; box-shadow: 0 0 0 2px #fff; }
+.sign .folk .ava:first-child { margin-left: 0; }
+.sign.shut .board { background: #39465a; color: #fff; }
+.sign.shut .t small { color: rgba(255, 255, 255, 0.7); }
+.sign.shut .num { background: rgba(255, 255, 255, 0.15) !important; }
+.barrier { width: min(300px, 70vw); height: 14px; border-radius: 4px; background: repeating-linear-gradient(-45deg, #f7c21b 0 12px, #2a3442 12px 24px); box-shadow: 0 3px 8px rgba(30, 50, 75, 0.3); }
+
+/* начало и конец пути */
+.station { position: absolute; transform: translate(-50%, -100%); text-align: center; pointer-events: none; }
+.station span { display: block; font: 500 10px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+.storm { position: absolute; left: 0; right: 0; top: 0; pointer-events: none; overflow: hidden;
+  background: linear-gradient(180deg, #2c3646 0%, #3f4b5e 45%, rgba(90, 105, 125, 0.55) 78%, rgba(150, 165, 180, 0) 100%); }
+.storm .title { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; color: #fff; white-space: nowrap; }
+.storm .title b { display: block; font: 400 clamp(18px, 5vw, 26px) var(--f-display); letter-spacing: 0.05em; }
+.storm .title span { font: 500 11px var(--f-mono); opacity: 0.75; text-transform: uppercase; letter-spacing: 0.08em; }
+.storm .bolt { position: absolute; width: 26px; color: #ffd23f; animation: flash 5s infinite; }
+@keyframes flash { 0%, 88%, 100% { opacity: 0.2; } 90%, 94% { opacity: 1; } 92% { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .storm .bolt { animation: none; } }
+
+/* оболочка поверх карты */
+.top { position: fixed; left: 0; right: 0; top: 0; z-index: 10; padding: var(--pad-t) var(--pad-r) 18px var(--pad-l); pointer-events: none;
+  background: linear-gradient(180deg, rgba(44, 54, 70, 0.35), rgba(44, 54, 70, 0)); }
+.top .mtop { max-width: 560px; margin: 0 auto; }
+.top .brand { color: #fff; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35); }
+.top .brand span { color: rgba(255, 255, 255, 0.8); }
+.bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: center; align-items: center; gap: 10px;
+  padding: 20px var(--pad-r) var(--pad-b) var(--pad-l); pointer-events: none;
+  background: linear-gradient(0deg, rgba(223, 231, 238, 0.9) 30%, rgba(223, 231, 238, 0)); }
+.bottom > * { pointer-events: auto; }
+.bottom .cta { flex: 0 1 360px; justify-content: flex-start; }
+.tocur { position: fixed; z-index: 11; right: var(--pad-r); bottom: calc(var(--pad-b) + 82px); }
+.tocur .arr { display: block; transform: rotate(90deg); transition: transform 0.2s; }
+.tocur.down .arr { transform: rotate(-90deg); }
+/* низкое окно (телефон горизонтально, VK на ПК): «Играть» уезжает вправо, чтобы не закрывать тропу */
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) {
+  .bottom { justify-content: flex-end; background: none; }
+  .bottom .cta { flex: 0 0 auto; }
+  .tocur { bottom: calc(var(--pad-b) + 76px); }
+}
+</style>
+</head>
+<body>
+<div class="scroller" id="sc"><div class="trail" id="trail"></div></div>
+<div class="top" id="top"></div>
+<div class="bottom" id="bottom"></div>
+<button type="button" class="rbtn tocur" id="tocur" data-act="tocur" aria-label="К текущему уровню" hidden></button>
+
+<script src="shared/chars.js"></script>
+<script src="shared/map.js"></script>
+<script>
+(function () {
+  'use strict';
+  const M = window.MAP, { CHAPTERS, LEVELS, icon } = M;
+  const sc = document.getElementById('sc'), trail = document.getElementById('trail'), tocur = document.getElementById('tocur');
+  tocur.innerHTML = `<span class="arr">${icon('back')}</span>`;
+
+  // ---------- рисунки по сторонам тропы ----------
+  const P = M.PROPS, PW = M.PROPW;
+  const DECOR = { village: ['hut', 'tree', 'fence', 'tree', 'house', 'tree', 'rock'], city: ['tower', 'block', 'chimney', 'tower', 'house', 'block'],
+    cape: ['mill', 'pine', 'light', 'mill', 'tree', 'rock'], pass: ['mount', 'pine', 'pine', 'mount', 'pine', 'hut'] };
+
+  // ---------- раскладка ----------
+  const GAP = 98, SIGN_GAP = 150, BOTTOM = 230, TOP = 300;
+  let pts = [], first = true;
+
+  function layout() {
+    const vw = sc.clientWidth, colW = Math.min(vw, 560), cx = vw / 2, amp = Math.min(colW * 0.28, 140);
+    // y — снизу вверх; потом перевернём
+    let y = BOTTOM; const yb = [], signs = [], bands = [];
+    let phase = 0.3;
+    CHAPTERS.forEach((C, ci) => {
+      const bandStart = y - (ci === 0 ? BOTTOM : 40);
+      y += ci === 0 ? 40 : SIGN_GAP * 0.55;
+      signs.push({ ci, y }); y += SIGN_GAP * 0.6;
+      C.levels.forEach(L => {
+        yb[L.gi] = y; phase += 0.78;
+        pts[L.gi] = { x: cx + amp * Math.sin(phase), yb: y };
+        y += GAP + (L.tags.some(t => t.k === 'boss') ? 20 : 0);
+      });
+      bands.push({ ci, from: bandStart, to: y - 20 });
+    });
+    const H = y + TOP;
+    for (const p of pts) p.y = H - p.yb;
+    return { H, vw, cx, amp, colW, signs: signs.map(s => ({ ...s, y: H - s.y })), bands: bands.map(b => ({ ...b, top: H - b.to, bottom: H - b.from })) };
+  }
+
+  function render() {
+    const lay = layout(), { H, vw, cx, amp } = lay, cur = M.current();
+    trail.style.height = H + 'px';
+    // фон: тон главы переходит в тон следующей, сверху — шторм
+    trail.style.background = `linear-gradient(0deg, ${lay.bands.map(b => `${CHAPTERS[b.ci].tint} ${((H - b.bottom) / H * 100).toFixed(2)}%, ${CHAPTERS[b.ci].tint} ${((H - b.top) / H * 100 - 3).toFixed(2)}%`).join(', ')})`;
+
+    let h = '';
+    // туман над закрытыми главами
+    lay.bands.forEach(b => { if (M.gate(b.ci) !== 'open') h += `<div class="band fog" style="top:${b.top}px;height:${b.bottom - b.top}px"></div>`; });
+
+    // рисунки: по одному у каждого уровня — с той стороны, куда тропа не ушла; на широком окне — ещё и по краям
+    LEVELS.forEach((L, gi) => {
+      const p = pts[gi], C = CHAPTERS[L.ci], list = DECOR[C.key], k = list[gi % list.length];
+      const side = p.x > cx ? -1 : 1, x = cx + side * (amp + 30 + (gi * 37 % 40)), w = PW[k];
+      if (x - w / 2 > 4 && x + w / 2 < vw - 4) h += `<div class="prop" style="left:${x}px;top:${p.y + 20}px;width:${w}px">${P[k]}</div>`;
+      if (vw > 760) {
+        const k2 = list[(gi + 3) % list.length], x2 = gi % 2 ? cx - lay.colW / 2 - 60 - (gi * 53 % 120) : cx + lay.colW / 2 + 60 + (gi * 41 % 120);
+        h += `<div class="prop" style="left:${x2}px;top:${p.y + 40}px;width:${PW[k2] * 1.2}px;opacity:.85">${P[k2]}</div>`;
+      }
+    });
+
+    // путь: пройденная часть — сплошная, дальше — пунктир
+    const doneTo = cur != null ? cur : LEVELS.findIndex((_, i) => M.status(i) !== 'done');
+    const all = pts.slice(), done = pts.slice(0, (doneTo < 0 ? pts.length : doneTo + 1));
+    h += `<svg class="path" width="${vw}" height="${H}" viewBox="0 0 ${vw} ${H}">
+      <path d="${M.curve(all)}" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="14" stroke-linecap="round"/>
+      <path d="${M.curve(all)}" fill="none" stroke="rgba(30,50,75,.28)" stroke-width="3" stroke-dasharray="2 10" stroke-linecap="round"/>
+      <path d="${M.curve(done)}" fill="none" stroke="#f7c21b" stroke-width="8" stroke-linecap="round"/>
+    </svg>`;
+
+    // таблички глав
+    lay.signs.forEach(s => {
+      const C = CHAPTERS[s.ci], g = M.gate(s.ci), open = g === 'open';
+      const folk = C.people.slice(0, 3).map(w => M.ava(w, 'sm')).join('');
+      const sub = open ? `${icon('star', 'on')}${M.chapterStars(s.ci)} / ${C.levels.length * 3} · ${M.chapterPassed(s.ci)} из ${C.levels.length}`
+        : g === 'stars' ? `${icon('lock')}нужно ${C.need} ★ · у тебя ${M.total()}` : `${icon('lock')}${C.need} ★ и финал главы «${CHAPTERS[s.ci - 1].name}»`;
+      h += `<div class="sign ${open ? '' : 'shut'}" style="left:${cx}px;top:${s.y}px">
+        ${open ? '' : '<div class="barrier"></div>'}
+        <button type="button" class="board" data-act="${open ? 'stars' : 'gate'}" data-ci="${s.ci}">
+          <span class="num" style="background:${C.deep}">${s.ci + 1}</span>
+          <span class="t"><b>${C.name}</b><small>${sub}</small></span>
+          <span class="folk">${folk}</span>
+        </button></div>`;
+    });
+
+    // уровни
+    LEVELS.forEach((L, gi) => {
+      const p = pts[gi], s = M.status(gi), n = M.st.stars[gi], b = M.badgeOf(L), boss = L.tags.some(t => t.k === 'boss');
+      const cls = ['node', s, boss ? 'boss' : '', M.st.justDone === gi || (M.st.justDone != null && gi === cur) ? 'fresh' : ''].join(' ');
+      const inner = s === 'locked' ? icon('lock') : gi + 1;
+      h += `<button type="button" class="${cls}" data-act="level" data-gi="${gi}" style="left:${p.x}px;top:${p.y}px;--cc:${CHAPTERS[L.ci].deep}" aria-label="${gi + 1}. ${L.n}${s === 'locked' ? ', закрыт' : ''}">
+        ${inner}${s === 'done' ? M.starsRow(n) : ''}${b && s !== 'done' ? `<span class="bdg k-${b.k}">${icon(M.TAGS[b.k].icon)}</span>` : ''}</button>`;
+    });
+
+    // житель у текущего уровня просит о помощи
+    if (cur != null) {
+      const p = pts[cur], L = LEVELS[cur], right = p.x < cx;
+      h += `<div class="asker" style="top:${p.y - 22}px;${right ? `left:${p.x + 50}px` : `right:${vw - p.x + 50}px;flex-direction:row-reverse`}">${M.ava(L.who)}<span class="bub">${L.n}</span></div>`;
+    }
+
+    // метеостанция внизу, шторм наверху
+    h += `<div class="station" style="left:${cx}px;top:${H - 70}px">
+      <svg viewBox="0 0 120 80" width="120"><rect x="56" y="6" width="3" height="56" fill="#36506b"/><path d="M59 8h26l-6 7 6 7H59z" fill="#f7c21b"/><path d="M14 44l26-16 26 16z" fill="#36506b"/><rect x="20" y="44" width="40" height="30" fill="#f6f8fa"/><rect x="26" y="50" width="9" height="8" fill="#9fc0dd"/><rect x="43" y="54" width="9" height="20" fill="#8a6240"/><g stroke="#36506b" stroke-width="2"><path d="M80 74V48M72 48h16"/></g><circle cx="72" cy="48" r="3" fill="#36506b"/><circle cx="88" cy="48" r="3" fill="#36506b"/></svg>
+      <span>метеостанция · начало</span></div>`;
+    h += `<div class="storm" style="height:${TOP + 60}px">
+      <svg viewBox="0 0 ${vw} 140" width="${vw}" height="140" preserveAspectRatio="none" style="position:absolute;left:0;top:${TOP - 90}px;opacity:.6"><path d="M0 60 Q ${vw * 0.15} 10 ${vw * 0.3} 50 T ${vw * 0.6} 40 T ${vw} 55 V0 H0Z" fill="#2c3646"/></svg>
+      <span class="bolt" style="left:${cx - amp - 10}px;top:${TOP - 150}px">${icon('energy')}</span>
+      <span class="bolt" style="left:${cx + amp}px;top:${TOP - 190}px;animation-delay:1.7s">${icon('energy')}</span>
+      <div class="title" style="top:${TOP - 170}px"><b>Большой шторм</b><span>идёт к острову</span></div></div>`;
+
+    trail.innerHTML = h;
+    document.getElementById('top').innerHTML = M.topbar();
+    document.getElementById('bottom').innerHTML = M.ctaButton();
+
+    // прокрутка к текущему уровню: при первом показе — сразу, после «Играть» — плавно
+    const target = cur != null ? pts[cur].y : M.st.justDone != null ? pts[M.st.justDone].y : null;
+    if (target != null) sc.scrollTo({ top: target - sc.clientHeight * 0.55, behavior: first ? 'auto' : 'smooth' });
+    else if (first) sc.scrollTo({ top: H });
+    first = false;
+    watch();
+  }
+
+  // кнопка «к текущему» — когда текущий уровень ушёл за экран
+  function watch() {
+    const cur = M.current();
+    if (cur == null) { tocur.hidden = true; return; }
+    const y = pts[cur].y - sc.scrollTop, vh = sc.clientHeight;
+    const off = y < 60 || y > vh - 120;
+    tocur.hidden = !off; tocur.classList.toggle('down', y > vh - 120);
+  }
+  sc.addEventListener('scroll', watch, { passive: true });
+
+  M.init({
+    key: 'A', name: 'Тропа', sub: 'путь к шторму', globalNum: true,
+    desc: 'Змейка уровней снизу вверх: от метеостанции через четыре главы к Большому шторму. Карта прокручивается, «Играть» всегда под пальцем.',
+    tips: ['Прокрути вверх — видно закрытые главы под туманом и шторм в конце пути.', 'Табличка главы — звёзды и жители; на закрытой — что нужно для открытия.', 'Ушёл далеко — справа появится кнопка «к текущему».'],
+    render,
+    onAct(a) { if (a === 'tocur') { const c = M.current(); if (c != null) sc.scrollTo({ top: pts[c].y - sc.clientHeight * 0.55, behavior: 'smooth' }); } },
+  });
+})();
+</script>
+</body>
+</html>

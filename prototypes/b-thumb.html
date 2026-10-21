@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Порыв — вариант B</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="shared/base.css">
+<style>
+/* B «Под пальцем»: круглые кнопки по дуге большого пальца в правом нижнем углу, сведения — маленькими плашками сверху. */
+.b > * { position: absolute; }
+.rnd { display: inline-grid; place-items: center; cursor: pointer; color: var(--ink); font-family: var(--f-body);
+  width: var(--tap); height: var(--tap); border-radius: 50%; padding: 0; font-size: 18px; background: var(--panel); border: 1px solid var(--line);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 14px rgba(30, 50, 75, 0.16); }
+.b .tl { top: var(--pad-t); left: var(--pad-l); display: flex; align-items: center; gap: 8px; max-width: calc(100% - 170px); }
+.b .tl .lvl { padding: 6px 12px; border-radius: 12px; }
+.b .hintp { top: calc(var(--pad-t) + var(--tap) + 10px); left: var(--pad-l); max-width: min(300px, calc(100% - 110px)); padding: 7px 11px; border-radius: 12px; }
+.b .compass { top: var(--pad-t); right: var(--pad-r); padding: 7px 10px 6px; display: grid; gap: 4px; justify-items: end; border-radius: 16px; }
+.b .compass .row { display: flex; align-items: center; gap: 8px; }
+.b .dial { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--ink); display: grid; place-items: center; background: var(--panel-solid); }
+.b .dial .arrow { width: 20px; height: 20px; }
+.b .compass .legend { width: 108px; }
+
+/* фигуры — круглые жетоны колонкой справа */
+.b .rail { right: var(--pad-r); bottom: calc(var(--pad-b) + 84px + 16px); }
+.b .inv { flex-direction: column; gap: 10px; }
+.b .piece { width: 58px; height: 58px; border-radius: 50%; padding: 0; grid-template-columns: 1fr; justify-items: center; align-content: center;
+  background: var(--panel); border: 1px solid var(--line); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 14px rgba(30, 50, 75, 0.16); }
+.b .piece canvas { width: 42px; height: 37px; grid-row: auto; }
+.b .piece .cnt { position: absolute; top: -3px; right: -3px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--accent); color: var(--accent-ink);
+  font-size: 11px; display: grid; place-items: center; padding: 0 4px; }
+.b .piece .nm { display: none; position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); background: var(--panel-solid);
+  border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; font-size: 12px; box-shadow: 0 4px 12px rgba(30, 50, 75, 0.12); }
+.b .piece[aria-pressed="true"] { border: 2px solid #d9a400; background: rgba(255, 246, 214, 0.95); }
+.b .piece[aria-pressed="true"] .nm { display: block; }
+[data-layout="wide"] .b .piece .nm { display: block; }
+[data-layout="wide"][data-input="mouse"] .b .piece .nm { opacity: 0.85; }
+
+/* главная кнопка в углу, поворот — рядом по дуге */
+.b .go.round { right: var(--pad-r); bottom: var(--pad-b); width: 84px; height: 84px; border-radius: 50%; padding: 0; font-size: 13px;
+  box-shadow: 0 6px 20px rgba(184, 138, 0, 0.45); flex-direction: column; gap: 2px; }
+.b .go.round .kbd { font-size: 9px; }
+.b .rotr { right: calc(var(--pad-r) + 74px); bottom: calc(var(--pad-b) + 74px); width: 50px; height: 50px; }
+.b .run-time { right: calc(var(--pad-r) + 96px); bottom: calc(var(--pad-b) + 30px); background: var(--panel); border-radius: 8px; padding: 3px 7px; }
+
+/* второстепенное — слева внизу */
+.b .bl { left: var(--pad-l); bottom: var(--pad-b); display: flex; align-items: center; gap: 8px; }
+.b .hintbtn { flex-direction: column; gap: 1px; line-height: 1.1; padding: 4px 12px; border-radius: 22px; background: var(--panel);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 14px rgba(30, 50, 75, 0.16); }
+.b #talk-slot { top: calc(var(--pad-t) + var(--tap) + 10px); left: var(--pad-l); right: calc(var(--pad-r) + 70px); }
+
+/* низкое окно: жетоны мельче и выше, «Ветер!» отодвигается от колонки */
+[data-layout="short"] .b .piece { width: 50px; height: 50px; }
+[data-layout="short"] .b .piece canvas { width: 36px; height: 32px; }
+[data-layout="short"] .b .inv { gap: 8px; }
+[data-layout="short"] .b .rail { bottom: auto; top: calc(var(--pad-t) + 76px); }
+[data-layout="short"] .b .hintp { top: var(--pad-t); left: 50%; transform: translateX(-50%); max-width: min(300px, calc(100% - 520px)); min-width: 180px; }
+[data-layout="short"] .b .tl .lvl .ch { display: none; }
+[data-layout="short"] .b .go.round { right: calc(var(--pad-r) + 64px); width: 76px; height: 76px; }
+[data-layout="short"] .b .rotr { right: calc(var(--pad-r) + 150px); bottom: var(--pad-b); }
+[data-layout="short"] .b .run-time { right: calc(var(--pad-r) + 150px); bottom: calc(var(--pad-b) + 58px); }
+
+/* широкое окно: колонка по центру высоты, подписи у жетонов видны всегда */
+[data-layout="wide"] .b .rail { bottom: auto; top: 50%; transform: translateY(-50%); }
+[data-layout="wide"] .b .go.round { width: 96px; height: 96px; font-size: 14px; }
+[data-layout="wide"] .b .rotr { right: calc(var(--pad-r) + 84px); bottom: calc(var(--pad-b) + 84px); }
+</style>
+</head>
+<body class="proto-left">
+<div class="frame">
+  <canvas id="c"></canvas>
+  <div class="hud b">
+    <div class="tl" data-block="auto">
+      <button class="rnd" type="button" data-act="menu" aria-label="Меню и пауза">☰</button>
+      <div class="lvl card"><span class="ch">Деревня · 8 из 8</span><b>Перед бурей</b></div>
+    </div>
+    <p class="hint hintp card" data-block="auto" data-show="build run">Синее — тихо, красное — дует. Дома должны оказаться в синем.</p>
+    <div class="compass card" data-block="auto">
+      <div class="row"><div class="wind-n"><b>22</b><span class="u">м/с</span></div><div class="dial"><span class="arrow" data-wind-arrow aria-hidden="true"></span></div></div>
+      <div class="legend" aria-label="Цвет поля — скорость ветра"><div class="bar"></div><div class="ticks"><span>0</span><span>14</span><span>28</span></div></div>
+    </div>
+
+    <div class="rail" data-block="r" data-drop><div class="inv" id="inv"></div></div>
+
+    <div class="bl" data-block="auto">
+      <button class="rnd" type="button" data-act="camL" title="Повернуть остров (Q)" aria-label="Повернуть остров влево">⟲</button>
+      <button class="rnd" type="button" data-act="camR" title="Повернуть остров (E)" aria-label="Повернуть остров вправо">⟳</button>
+      <button class="btn hintbtn" type="button" data-act="hint"><span>💡 Подсказка</span><span class="ad">▶ реклама</span></button>
+    </div>
+
+    <button class="rnd rotr sel-only" type="button" data-act="rot" title="Повернуть фигуру (R)" aria-label="Повернуть фигуру">↻</button>
+    <span class="run-time" data-run-time data-show="run" hidden></span>
+    <button class="btn go round" type="button" data-act="go" data-block="r"><span class="lbl">Ветер!</span><span class="kbd">Пробел</span></button>
+    <div id="talk-slot" data-block="none"></div>
+  </div>
+</div>
+<script src="shared/island.js"></script>
+<script>
+Proto.init({ key: 'B', name: 'Под пальцем', desc: 'Как в мобильных играх: всё, что жмут часто, — круглыми кнопками по дуге большого пальца справа внизу. Фигуры — жетоны колонкой, «Ветер!» — большой круг в углу. Сведения — маленькие плашки сверху, поле почти не закрыто. Для левшей угол можно отзеркалить в настройках.' });
+</script>
+</body>
+</html>

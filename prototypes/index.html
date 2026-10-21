@@ -1,0 +1,125 @@
+<title>Экран Порыва</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Оглавление прототипов: четыре карточки-схемы, как листы в папке смотрителя. Одна светлая тема — как в игре. */
+:root {
+  --bg: #dfe7ee; --sky: #f6f8fa; --card: #ffffff; --line: rgba(30, 50, 75, 0.12);
+  --ink: #17212c; --muted: #5a6979; --accent: #f7c21b; --accent-deep: #b88a00; --slab: #314a66; --ground: #ece5d3; --wood: #b98a5a; --proto: #7a4fd0;
+  --f-display: "Rubik Mono One", "Arial Black", system-ui, sans-serif;
+  --f-body: "Golos Text", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+body { background: var(--bg) radial-gradient(120% 70% at 50% 0%, var(--sky) 0%, var(--bg) 70%); color: var(--ink); font: 15px/1.5 var(--f-body); margin: 0; }
+.wrap { max-width: 980px; margin: 0 auto; padding-block: 32px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+header { display: grid; gap: 10px; max-width: 64ch; }
+.kick { font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 8px; }
+.flag { width: 16px; height: 16px; position: relative; flex: none; }
+.flag::before { content: ""; position: absolute; left: 0; top: 0; width: 2px; height: 16px; background: var(--ink); }
+.flag::after { content: ""; position: absolute; left: 2px; top: 1px; width: 13px; height: 9px; background: var(--accent); clip-path: polygon(0 0, 100% 50%, 0 100%); }
+h1 { margin: 0; font: 400 clamp(24px, 5vw, 34px)/1.1 var(--f-display); letter-spacing: 0.03em; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.v { display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; color: inherit; text-decoration: none; box-shadow: 0 6px 20px rgba(30, 50, 75, 0.08); }
+.v:hover { border-color: var(--accent-deep); }
+.v:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 2px; }
+.v svg { width: 100%; height: 150px; background: #eef2f6; border-radius: 10px; }
+.v h2 { margin: 0; font: 400 15px var(--f-display); letter-spacing: 0.03em; display: flex; gap: 8px; align-items: baseline; }
+.v h2 span { font: 500 12px var(--f-mono); color: var(--accent-deep); }
+.v p { margin: 0; font-size: 13px; color: var(--muted); }
+.v .go { font: 600 13px var(--f-body); color: var(--ink); }
+.s-phone { fill: #fff; stroke: var(--ink); stroke-width: 1.5; }
+.s-isl { fill: var(--slab); } .s-gr { fill: var(--ground); }
+.s-ui { fill: rgba(23, 33, 44, 0.16); } .s-go { fill: var(--accent); } .s-wood { fill: var(--wood); } .s-txt { fill: var(--ink); }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.note { background: rgba(255, 255, 255, 0.6); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.note h3 { margin: 0 0 6px; font: 500 11px var(--f-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.note ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+.note b { font-weight: 600; }
+.tag { font: 500 11px var(--f-mono); color: #fff; background: var(--proto); border-radius: 4px; padding: 1px 5px; }
+code { font: 500 12px var(--f-mono); background: rgba(30, 50, 75, 0.07); padding: 1px 4px; border-radius: 4px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="kick"><span class="flag" aria-hidden="true"></span>Порыв · прототипы экрана</div>
+    <h1>Четыре компоновки одного уровня</h1>
+    <p>Уровень «Перед бурей» в четырёх вариантах интерфейса. Каждый вариант сам перестраивается под окно: сужай и расширяй браузер или поверни телефон. Остров всегда вписывается в место, которое свободно от панелей.</p>
+    <p>Прототипы карты уровней — <a href="map.html" style="color: var(--ink); font-weight: 600;">здесь</a>.</p>
+  </header>
+
+  <div class="grid">
+    <a class="v" href="a-dock.html">
+      <svg viewBox="0 0 200 150" aria-hidden="true">
+        <rect class="s-phone" x="72" y="8" width="56" height="134" rx="8"/>
+        <rect class="s-ui" x="76" y="14" width="48" height="16" rx="3"/>
+        <path class="s-isl" d="M100 58 L122 70 L100 82 L78 70Z"/><path class="s-gr" d="M100 56 L122 68 L100 80 L78 68Z"/>
+        <rect class="s-ui" x="76" y="104" width="48" height="32" rx="4"/>
+        <rect class="s-go" x="106" y="124" width="16" height="9" rx="2"/>
+      </svg>
+      <h2><span>A</span>Док</h2>
+      <p>Развитие текущего экрана: сведения полосой сверху, фигуры и «Ветер!» доком снизу. На низком окне док разъезжается по бокам.</p>
+      <span class="go">Открыть →</span>
+    </a>
+    <a class="v" href="b-thumb.html">
+      <svg viewBox="0 0 200 150" aria-hidden="true">
+        <rect class="s-phone" x="72" y="8" width="56" height="134" rx="8"/>
+        <rect class="s-ui" x="76" y="14" width="22" height="7" rx="3"/><rect class="s-ui" x="108" y="14" width="16" height="10" rx="4"/>
+        <path class="s-isl" d="M98 56 L120 68 L98 80 L76 68Z"/><path class="s-gr" d="M98 54 L120 66 L98 78 L76 66Z"/>
+        <circle class="s-ui" cx="119" cy="92" r="4.5"/><circle class="s-ui" cx="119" cy="103" r="4.5"/><circle class="s-ui" cx="119" cy="114" r="4.5"/>
+        <circle class="s-go" cx="116" cy="130" r="8"/><circle class="s-ui" cx="81" cy="133" r="3.5"/><rect class="s-ui" x="87" y="130" width="14" height="7" rx="3"/>
+      </svg>
+      <h2><span>B</span>Под пальцем</h2>
+      <p>Как в мобильных играх: круглые кнопки по дуге большого пальца справа внизу, сведения — маленькими плашками сверху.</p>
+      <span class="go">Открыть →</span>
+    </a>
+    <a class="v" href="c-journal.html">
+      <svg viewBox="0 0 200 150" aria-hidden="true">
+        <rect class="s-phone" x="72" y="8" width="56" height="134" rx="8"/>
+        <path class="s-isl" d="M100 34 L122 46 L100 58 L78 46Z"/><path class="s-gr" d="M100 32 L122 44 L100 56 L78 44Z"/>
+        <path d="M73 80 h54 v54 a7 7 0 0 1 -7 7 h-40 a7 7 0 0 1 -7 -7Z" fill="#f7f3ea" stroke="rgba(90,70,40,.3)"/>
+        <rect class="s-ui" x="78" y="86" width="44" height="6" rx="2"/><rect class="s-ui" x="78" y="98" width="44" height="14" rx="2"/>
+        <rect class="s-go" x="106" y="122" width="16" height="9" rx="2"/>
+      </svg>
+      <h2><span>C</span>Журнал</h2>
+      <p>Поле и интерфейс не пересекаются: сплошной «журнал смотрителя» справа на ПК и шторкой снизу на телефоне. Остров крутится свайпом; в панели прототипа — вид «Прямо» и камера «Круче».</p>
+      <span class="go">Открыть →</span>
+    </a>
+    <a class="v" href="d-pier.html">
+      <svg viewBox="0 0 200 150" aria-hidden="true">
+        <rect class="s-phone" x="72" y="8" width="56" height="134" rx="8"/>
+        <rect class="s-txt" x="77" y="15" width="26" height="4" rx="1"/><rect class="s-ui" x="77" y="22" width="18" height="3" rx="1"/>
+        <path class="s-isl" d="M100 52 L122 64 L100 76 L78 64Z"/><path class="s-gr" d="M100 50 L122 62 L100 74 L78 62Z"/>
+        <rect class="s-wood" x="98" y="76" width="4" height="22"/><rect class="s-wood" x="78" y="98" width="44" height="12" rx="2"/>
+        <rect class="s-go" x="88" y="124" width="24" height="9" rx="2"/>
+      </svg>
+      <h2><span>D</span>Пристань</h2>
+      <p>Почти без панелей: подписи прямо на небе, фигуры — ящиками на причале под островом. Причал и реплики едут вместе с островом.</p>
+      <span class="go">Открыть →</span>
+    </a>
+  </div>
+
+  <div class="notes">
+    <section class="note">
+      <h3>Как смотреть</h3>
+      <ul>
+        <li>Фиолетовая вкладка <span class="tag">прототип</span> у края экрана — это не интерфейс игры. В ней фазы уровня (расстановка, реплика, прогон, победа, поражение), текущий макет и переходы к другим вариантам.</li>
+        <li>Там же — «Показать свободную зону поля»: видно, куда вписывается остров.</li>
+        <li>Фигуру тянут из запаса на поле: над панелью за пальцем едет иконка, над полем — сама фигура. Поставленная фигура выделена и приподнята, рядом ↻ и ✥. Её можно оставить в красном — она дождётся поворота или переноса, но отпустить так не даст. Пока тащишь — внизу корзина.</li>
+        <li>Провести по полю — повернуть остров, где отпустил, там и остался. Два пальца — приблизить.</li>
+        <li>На ПК: <code>R</code> — повернуть фигуру, <code>Q</code>/<code>E</code> — повернуть остров, <code>Пробел</code> — ветер, <code>1</code>–<code>5</code> — фазы.</li>
+      </ul>
+    </section>
+    <section class="note">
+      <h3>Три макета</h3>
+      <ul>
+        <li><b>Телефон вертикально</b> — окно уже 600 px или заметно выше, чем шире.</li>
+        <li><b>Низкое окно</b> — шире, чем выше, и ниже 520 px: телефон горизонтально, окно игры VK на ПК (от 600×500).</li>
+        <li><b>Широкое окно</b> — всё остальное: ПК, планшет. С мышью игровая зона не шире 2:1, дальше просто небо (правило Яндекса для ПК).</li>
+        <li>Макет выбирается по форме окна и способу ввода (палец или мышь), а не по типу устройства.</li>
+      </ul>
+    </section>
+  </div>
+</div>

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Порыв — вариант D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="shared/base.css">
+<style>
+/* D «Пристань»: почти без панелей. Название и ветер — текстом прямо на небе, фигуры — ящиками на причале у острова.
+   Причал и реплика жителя привязаны к острову (к его проекции на экране), а не к краю окна. */
+.d > * { position: absolute; }
+.d .title { top: var(--pad-t); left: var(--pad-l); max-width: min(330px, calc(100% - 150px)); display: grid; gap: 4px; justify-items: start; }
+.d .title h1 { margin: 0; font: 400 22px/1.05 var(--f-display); letter-spacing: 0.03em; text-wrap: balance; }
+.d .title .hint { color: var(--ink); opacity: 0.75; }
+.d .hintbtn { margin-top: 4px; gap: 6px; border-radius: 20px; background: var(--panel); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.d .tr { top: var(--pad-t); right: var(--pad-r); display: grid; justify-items: end; gap: 4px; }
+.d .tr .row { display: flex; align-items: center; gap: 10px; }
+.d .tr .wind-n b { font-size: 24px; }
+.d .tr .legend { width: 120px; }
+.d .tr .btn.icon { background: var(--panel); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+
+/* причал: место под него зарезервировано (.pier-space), а встаёт он под остров */
+.d .pier-space { left: 0; right: 0; bottom: calc(var(--pad-b) + var(--tap) + 20px); height: 76px; }
+.d .pier { left: 0; top: 0; display: flex; align-items: center; gap: 6px; padding: 7px; border-radius: 8px;
+  background: repeating-linear-gradient(90deg, #c9a070 0 26px, #b08452 26px 27px); box-shadow: 0 6px 16px rgba(60, 40, 20, 0.25), inset 0 -3px 0 rgba(0, 0, 0, 0.12); }
+.d .pier::before { content: ""; position: absolute; left: var(--gx, 50%); bottom: 100%; width: 16px; height: var(--gap, 0px); transform: translateX(-50%);
+  background: repeating-linear-gradient(0deg, #c9a070 0 6px, #8a6240 6px 7px); }
+.d .inv { gap: 6px; }
+.d .piece { width: 58px; height: 58px; padding: 0; grid-template-columns: 1fr; justify-items: center; align-content: center; border-radius: 6px;
+  background: #ecdcb9; border: 2px solid #9a7148; box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.35); }
+.d .piece:hover { background: #f3e6c8; }
+.d .piece canvas { width: 44px; height: 38px; grid-row: auto; }
+.d .piece .nm { display: none; }
+.d .piece .cnt { position: absolute; top: -8px; right: -8px; min-width: 22px; height: 22px; border-radius: 11px; display: grid; place-items: center; padding: 0 4px;
+  background: var(--ink); color: #fff; font-size: 11px; }
+.d .piece[aria-pressed="true"] { transform: translateY(-6px); border-color: #d9a400; box-shadow: 0 6px 0 -2px rgba(0, 0, 0, 0.18), 0 0 0 3px var(--accent); }
+.d .piece[aria-pressed="true"] .nm { display: block; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); white-space: nowrap;
+  background: var(--ink); color: #fff; font-size: 12px; padding: 3px 8px; border-radius: 6px; }
+.d .pcam { width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.85); font-size: 17px; cursor: pointer; color: var(--ink); }
+.d .goarea { left: 50%; bottom: var(--pad-b); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; }
+.d .goarea .go { min-width: 190px; min-height: calc(var(--tap) + 8px); font-size: 16px; }
+.d .goarea .gcam { display: none; }
+.d .goarea .run-time { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--panel); border-radius: 8px; padding: 2px 8px; }
+.d #talk-slot { left: 0; top: 0; width: min(330px, calc(100% - 24px)); }
+.d #talk-slot .talk { position: relative; background: var(--panel-solid); }
+.d #talk-slot .talk::after { content: ""; position: absolute; left: var(--tx, 50%); width: 16px; height: 16px; background: var(--panel-solid); border: 1px solid var(--accent);
+  border-top: 0; border-left: 0; transform: translateX(-50%) rotate(45deg); bottom: -9px; }
+.d #talk-slot.below .talk::after { bottom: auto; top: -9px; transform: translateX(-50%) rotate(225deg); }
+
+[data-layout="portrait"] .d .title h1 { font-size: 18px; }
+@media (max-width: 380px) { .d .piece { width: 52px; height: 52px; } .d .piece canvas { width: 40px; height: 34px; } }
+
+/* низкое окно: причал — вертикально слева, «Ветер!» — справа внизу, повороты камеры — рядом с ним */
+[data-layout="short"] .d .title { max-width: 300px; }
+[data-layout="short"] .d .title .hint { display: none; }
+[data-layout="short"] .d .title h1 { font-size: 16px; }
+[data-layout="short"] .d .pier-space { left: var(--pad-l); right: auto; top: calc(var(--pad-t) + 88px); bottom: var(--pad-b); width: 78px; height: auto; }
+[data-layout="short"] .d .pier { flex-direction: column; background: repeating-linear-gradient(0deg, #c9a070 0 26px, #b08452 26px 27px); }
+[data-layout="short"] .d .pier::before { left: 100%; bottom: auto; top: var(--gy, 50%); width: var(--gap, 0px); height: 16px; transform: translateY(-50%);
+  background: repeating-linear-gradient(90deg, #c9a070 0 6px, #8a6240 6px 7px); }
+[data-layout="short"] .d .inv { flex-direction: column; }
+[data-layout="short"] .d .piece { width: 52px; height: 52px; }
+[data-layout="short"] .d .piece canvas { width: 40px; height: 34px; }
+[data-layout="short"] .d .pier .pcam { display: none; }
+[data-layout="short"] .d .goarea { left: auto; right: var(--pad-r); transform: none; }
+[data-layout="short"] .d .goarea .gcam { display: inline-grid; place-items: center; }
+[data-layout="short"] .d .goarea .go { min-width: 150px; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <canvas id="c"></canvas>
+  <div class="hud d">
+    <div class="title" data-block="auto">
+      <span class="ch">Деревня · 8 из 8</span>
+      <h1>Перед бурей</h1>
+      <p class="hint" data-show="build run">Синее — тихо, красное — дует. Дома должны оказаться в синем.</p>
+      <button class="btn hintbtn" type="button" data-act="hint" data-show="build">💡 Подсказка <span class="ad">▶ реклама</span></button>
+    </div>
+    <div class="tr" data-block="auto">
+      <div class="row">
+        <div class="wind-n"><span class="arrow" data-wind-arrow aria-hidden="true"></span><b>22</b><span class="u">м/с</span></div>
+        <button class="btn icon" type="button" data-act="menu" aria-label="Меню и пауза">☰</button>
+      </div>
+      <div class="legend" aria-label="Цвет поля — скорость ветра"><div class="bar"></div><div class="ticks"><span>0</span><span>14</span><span>28 м/с</span></div></div>
+    </div>
+
+    <div class="pier-space" data-block="auto" aria-hidden="true"></div>
+    <div class="pier pe" id="pier" data-block="none" data-drop>
+      <button class="pcam" type="button" data-act="camL" title="Повернуть остров (Q)" aria-label="Повернуть остров влево">⟲</button>
+      <div class="inv" id="inv"></div>
+      <button class="pcam" type="button" data-act="camR" title="Повернуть остров (E)" aria-label="Повернуть остров вправо">⟳</button>
+    </div>
+
+    <div class="goarea" data-block="auto">
+      <button class="btn icon gcam" type="button" data-act="camL" aria-label="Повернуть остров влево">⟲</button>
+      <button class="btn icon gcam" type="button" data-act="camR" aria-label="Повернуть остров вправо">⟳</button>
+      <button class="btn icon sel-only" type="button" data-act="rot" title="Повернуть фигуру (R)" aria-label="Повернуть фигуру">↻</button>
+      <span class="run-time" data-run-time data-show="run" hidden></span>
+      <button class="btn go" type="button" data-act="go"><span class="lbl">Ветер!</span> <span class="kbd">Пробел</span></button>
+    </div>
+    <div id="talk-slot" data-block="none"></div>
+  </div>
+</div>
+<script src="shared/island.js"></script>
+<script>
+Proto.init({ key: 'D', name: 'Пристань', desc: 'Почти без панелей: название и ветер — текстом прямо на небе, фигуры — ящиками на причале под островом. Причал и реплика жителя привязаны к острову: повернёшь или сожмёшь окно — они едут вместе с ним.' });
+
+(function () {
+  const frame = document.querySelector('.frame'), pier = document.getElementById('pier'), space = document.querySelector('.pier-space'), talk = document.getElementById('talk-slot');
+  // мостки идут к ближнему углу острова (снизу) или к левому — на низком окне
+  function placePier() {
+    const isl = Proto.islandInfo();
+    const fr = frame.getBoundingClientRect(), s = space.getBoundingClientRect(), pw = pier.offsetWidth, ph = pier.offsetHeight;
+    if (document.documentElement.dataset.layout === 'short') {
+      const left = s.left - fr.left + (s.width - pw) / 2, cy = isl.left[1];
+      const top = Math.max(s.top - fr.top, Math.min(s.bottom - fr.top - ph, cy - ph / 2));
+      pier.style.left = left + 'px'; pier.style.top = top + 'px';
+      pier.style.setProperty('--gap', Math.max(0, isl.left[0] - (left + pw)) + 'px');
+      pier.style.setProperty('--gy', Math.max(10, Math.min(ph - 10, cy - top)) + 'px');
+    } else {
+      const top = s.top - fr.top + (s.height - ph) / 2, left = Math.max(8, Math.min(fr.width - pw - 8, isl.bottom[0] - pw / 2));
+      pier.style.left = left + 'px'; pier.style.top = top + 'px';
+      pier.style.setProperty('--gap', Math.max(0, top - isl.bottom[1]) + 'px');
+      pier.style.setProperty('--gx', Math.max(12, Math.min(pw - 12, isl.bottom[0] - left)) + 'px');
+    }
+  }
+  // реплика — пузырь над хижиной, которую надо прикрыть
+  function placeTalk() {
+    const t = talk.firstElementChild; if (!t || t.hidden) return;
+    const fr = frame.getBoundingClientRect(), p = Proto.toScreen(6.5, 2.5, 1.2), w = talk.offsetWidth, h = talk.offsetHeight;
+    const left = Math.max(12, Math.min(fr.width - w - 12, p[0] - w / 2));
+    let top = p[1] - h - 14, below = false;
+    if (top < 12) { top = Proto.toScreen(6.5, 2.5, 0)[1] + 14; below = true; }
+    talk.classList.toggle('below', below);
+    talk.style.left = left + 'px'; talk.style.top = top + 'px';
+    talk.style.setProperty('--tx', Math.max(20, Math.min(w - 20, p[0] - left)) + 'px');
+  }
+  const place = () => { placePier(); placeTalk(); };
+  Proto.on('move', place);
+  Proto.on('phase', () => requestAnimationFrame(place));
+  new ResizeObserver(place).observe(pier);
+})();
+</script>
+</body>
+</html>
