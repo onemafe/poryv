@@ -714,6 +714,7 @@ function rotCells(cells, rot) {
   return c.map(([x, y]) => [x - mx, y - my]);
 }
 function pieceCells(pc) { return rotCells(TYPES[pc.type].cells, pc.rot).map(([x, y]) => [x + pc.x, y + pc.y]); }
+const pname = pc => pc.name || TYPES[pc.type].name; // у постройки уровня может быть своё имя (кузня — это «Дом»)
 
 const LEVELS = [
   { name: 'Первый порыв', chapter: 'Деревня', wind: 21, dir: [1, 0],
@@ -780,7 +781,7 @@ const LEVELS = [
     hint: 'За кузней хижинам тихо, но сама кузня держит только 15 м/с. Прикрой её.',
     intro: [['fyodor', 'Кузня у меня крепкая, за ней всей улице тихо. Но больше 15 и она не выдержит.'], ['keeper', 'Прикроешь кузню — она прикроет остальных.']],
     outro: [['fyodor', 'Устояла кузня — устояла и улица.']],
-    fixed: [{ type: 'house', x: 2, y: 4, rot: 1 }, { type: 'hut', x: 4, y: 4, rot: 0 }, { type: 'hut', x: 6, y: 5, rot: 0 },
+    fixed: [{ type: 'house', x: 2, y: 4, rot: 1, name: 'Кузня' }, { type: 'hut', x: 4, y: 4, rot: 0 }, { type: 'hut', x: 6, y: 5, rot: 0 },
             { type: 'stack', x: 8, y: 1, rot: 0 }, { type: 'stack', x: 8, y: 8, rot: 0 }, { type: 'rock', x: 9, y: 4, rot: 0 }, { type: 'wall', x: 4, y: 8, rot: 0 }, { type: 'wall', x: 5, y: 8, rot: 0 }, { type: 'wall', x: 6, y: 8, rot: 0 }, { type: 'stack', x: 0, y: 1, rot: 0 }],
     inv: { tree: 2 },
     solution: [{ type: 'tree', x: 1, y: 4, rot: 0 }, { type: 'tree', x: 1, y: 5, rot: 0 }] },
@@ -1620,7 +1621,7 @@ function evaluate(world) {
     if (T.kind === 'loose' && pc.peak > T.lift * K) score += 0.2 * (pc.peak - T.lift * K);
     if (T.kind === 'gate' && pc.jammed && M.gateBudget && !fails.some(f => f.kind === 'jam')) { fails.push({ kind: 'jam', pc, text: 'ворота заклинило — держал закрытыми слишком долго' }); score += 3; }
     if (!T.limit) continue;
-    if (pc.broken) fails.push({ kind: 'broken', pc, text: pc.brokeBy === 'tent' ? `${T.name}: снесло палаткой` : `${T.name}: сдуло` });
+    if (pc.broken) fails.push({ kind: 'broken', pc, text: pc.brokeBy === 'tent' ? `${pname(pc)}: снесло палаткой` : `${pname(pc)}: сдуло` });
     if (!pc.broken) score += Math.max(0, pc.peak - limitOf(world, pc) * K);
     if (pc.broken) score += 3;
   }
@@ -1632,13 +1633,13 @@ function evaluate(world) {
       const T = TYPES[pc.type]; if (pc.broken || !isHouse(T) || !pc.ring) continue;
       const v = ringMean(world, pc, s.dep);
       pc.snow = v;
-      if (v > HOUSE_SNOW) fails.push({ kind: 'snow', pc, text: `${T.name}: занесло по крышу` });
+      if (v > HOUSE_SNOW) fails.push({ kind: 'snow', pc, text: `${pname(pc)}: занесло по крышу` });
       score += Math.max(0, v - HOUSE_SNOW * K) * 4;
     }
   }
   if (M.smoke) for (const pc of world.pieces) {
     const T = TYPES[pc.type]; if (pc.broken || !pc.fixed || !isHouse(T) || T.kind === 'shed') continue; // жилые дома уровня
-    if (pc.expo > SMOKE_MAX) fails.push({ kind: 'smoke', pc, text: `${T.name}: в дыму` });
+    if (pc.expo > SMOKE_MAX) fails.push({ kind: 'smoke', pc, text: `${pname(pc)}: в дыму` });
     score += Math.max(0, pc.expo - SMOKE_MAX * K);
   }
   if (world.target) {
@@ -1803,7 +1804,7 @@ function loadLevel(i, brief = true) {
   }
   for (const pc of world.pieces) { pc.broken = false; pc.load = 0; pc.hp = 1; }
   st.sel = null; st.selected = null; st.selBad = false; st.drag = null; st.hist = []; st.rot = 0;
-  st.phase = 'build'; st.msg = null; st.res = null; st.paused = false; debris.length = 0;
+  st.phase = 'build'; st.msg = null; st.res = null; st.paused = false; st.worst = null; st.pendingWin = null; debris.length = 0;
   world.running = false;
   rebuild(world); simReset(world.sim, world.dir); world.t = 0;
   resetParticles(); resetCars();
@@ -1928,7 +1929,7 @@ function helpText() {
   if (st.selected) return selText(st.selected);
   if (st.sel) return `${TYPES[st.sel].name}: нажми на клетку, чтобы поставить.`;
   if (shopOf()) return 'Руби деревья нажатием (пень — посадить обратно). Брёвна трать на плетень и забор.';
-  if (!st.sandbox && invLeft() > 0) return 'Тяни фигуру на поле. Провести по полю — повернуть остров.';
+  if (!st.sandbox && invLeft() > 0) return 'Тяни фигуру на поле. Уровень засчитается, когда на поле все фигуры. Провести по полю — повернуть остров.';
   return st.sandbox ? 'Тяни фигуры на поле, меняй ветер.' : 'Всё расставлено. Жми «Ветер!»';
 }
 const setTog = (sel, on) => { const b = $(sel); b.setAttribute('aria-pressed', String(on)); if (b.classList.contains('tog')) b.textContent = on ? 'Вкл' : 'Выкл'; };
@@ -1980,7 +1981,7 @@ function renderTalk() {
   for (const l of m.lines) box.appendChild(lineEl(l));
   const acts = document.createElement('div'); acts.className = 'acts';
   if (m.skip) { const sk = document.createElement('button'); sk.type = 'button'; sk.className = 'skip'; sk.textContent = 'пропустить обучение'; sk.onclick = skipTut; acts.appendChild(sk); }
-  if (m.act) { const nb = document.createElement('button'); nb.type = 'button'; nb.className = 'btn go'; nb.textContent = m.act.label; nb.onclick = m.act.fn; acts.appendChild(nb); }
+  if (m.act) { const nb = document.createElement('button'); nb.type = 'button'; nb.className = m.act.quiet ? 'skip' : 'btn go'; nb.textContent = m.act.label; nb.onclick = m.act.fn; acts.appendChild(nb); }
   if (acts.children.length) box.appendChild(acts);
   slot.appendChild(box);
 }
@@ -2218,7 +2219,7 @@ function onMove(e) {
   } else if (d.kind === 'pending-cam' && Math.abs(dx) > 10) d.kind = 'cam';
   const k = st.drag && st.drag.kind;
   if (k === 'new' || k === 'move') dragTo(e.clientX, e.clientY);
-  else if (k === 'cam') { cam.a = cam.target = d.a0 + dx * 0.009; if (Math.abs(dx) > 60) tutCamDone(); }
+  else if (k === 'cam') cam.a = cam.target = d.a0 + dx * 0.009;
 }
 function onUp(e) {
   if (pointers.has(e.pointerId)) pointers.delete(e.pointerId);
@@ -2227,6 +2228,7 @@ function onUp(e) {
   const cancel = e.type === 'pointercancel';
   if (d.kind === 'new' || d.kind === 'move') { endDrag(cancel, e.clientX, e.clientY); return; }
   st.drag = null;
+  if (d.kind === 'cam' && !cancel && Math.abs(cam.a - d.a0) > 0.6) tutCamDone(); // обучение: остров повернули
   if (cancel || d.kind === 'cam') return; // где отпустил, там остров и остался
   if (d.kind === 'pending-grab') { toast('Зажми ✥ и тяни — фигура поедет за пальцем'); return; }
   if (d.kind === 'pending-sel') { rotateSel(); return; }
@@ -2259,7 +2261,7 @@ function tapBoard(e, hit) {
     if (placeAt(t, cx - off[0], cy - off[1], st.rot)) { if (canTake(t)) st.sel = t; record(before); }
     return;
   }
-  if (hit && hit.fixed) toast(`${TYPES[hit.type].name} стоит здесь изначально, двигать нельзя. ${specText(hit.type)}.`);
+  if (hit && hit.fixed) toast(`${pname(hit)} стоит здесь изначально, двигать нельзя. ${specText(hit.type)}.`);
 }
 function turnCam(k) { cam.target = Math.round(cam.target / (Math.PI / 2)) * (Math.PI / 2) + k * Math.PI / 2; tutCamDone(); }
 // кнопки ↻ ✥ ✓ — под выделенной фигурой; ✓ серая, пока фигура в красном
@@ -2367,13 +2369,14 @@ function resetScene() {
   for (const pc of world.pieces) { pc.broken = false; pc.load = 0; pc.hp = 1; pc.flying = null; pc.landed = null; pc.energy = 0; pc.closedT = 0; pc.jammed = false; if (TYPES[pc.type].kind === 'gate') pc.open = true; }
   debris.length = 0; st.phase = 'build'; st.msg = null; st.res = null; st.freeze = null; world.energy = 0;
   if (st.tut === 'camera') st.tut = null;
+  st.pendingWin = null;
   world.dir = world.baseDir.slice(); if (world.sim.c) { world.sim.c.fill(0); world.sim.dep.fill(0); }
   rebuild(world); resetParticles(); updateUI();
 }
 function go() {
   if (st.phase === 'build') {
     if (!tryCommit()) return;
-    st.sel = null; st.msg = null; st.res = null; st.phase = 'run'; st.frozeRun = false; st.jamShown = false; debris.length = 0;
+    st.sel = null; st.msg = null; st.res = null; st.phase = 'run'; st.frozeRun = false; st.jamShown = false; st.worst = null; debris.length = 0;
     beginRun(world); resetParticles(); updateUI();
   } else if (st.phase === 'run') resetScene(); // «Стоп»
 }
@@ -2530,10 +2533,19 @@ function tutToFence() {
   st.rot = (tutSol().rot + 1) % 4; // забор приходит поперёк подсветки — игрок учится поворачивать
   buildInv(); resetScene();
 }
+// как повернуть остров — по устройству: на тач-экране свайп, на ПК — мышью или Q/E
+const camHow = () => html.dataset.input === 'touch' ? 'проведи пальцем по полю вбок' : 'потяни поле мышью вбок (или нажми Q или E)';
+// остров повернули: дать посмотреть на него с новой стороны, потом — окно итога
 function tutCamDone() {
   if (st.tut !== 'camera') return;
-  st.tut = null; st.msg = null;
-  if (st.pendingWin) { const w = st.pendingWin; st.pendingWin = null; updateUI(); winWindow(w); }
+  st.tut = null;
+  st.msg = { cls: 'win', lines: [say('keeper', 'Вот так. Если не видно, что за домом, — поверни остров.')] };
+  updateUI();
+  setTimeout(showPendingWin, 1500);
+}
+function showPendingWin() {
+  if (!st.pendingWin || st.screen !== 'game') return;
+  const w = st.pendingWin; st.pendingWin = null; st.tut = null; st.msg = null; updateUI(); winWindow(w);
 }
 function skipTut() {
   if (st.phase === 'run') return;
@@ -2558,9 +2570,9 @@ function finishRun() {
     const w = levelWon();
     if (st.tut === 'fence') { // напоследок — повернуть остров; окно итога — после этого
       st.tut = 'camera'; st.pendingWin = w;
-      st.msg = { cls: 'win', act: { label: 'Дальше →', fn: () => { st.tut = 'camera'; tutCamDone(); } }, lines: [
+      st.msg = { cls: 'win', act: { label: 'пропустить', fn: showPendingWin, quiet: true }, lines: [
         say('ilya', 'Стоит! Вот спасибо!'),
-        say('keeper', 'Забор принял ветер на себя, а за ним тихо — видишь синее пятно? Так и играем: ищи, где ветру тише. А теперь проведи пальцем по полю — поверни остров, глянь с другой стороны.')] };
+        say('keeper', `Забор принял ветер на себя, а за ним тихо — видишь синее пятно? Так и играем: ищи, где ветру тише. А теперь поверни остров: ${camHow()}.`)] };
       updateUI(); return;
     }
     updateUI(); winWindow(w); return;
@@ -2571,7 +2583,7 @@ function finishRun() {
     const list = ev.fails.map(f => {
       if (f.kind === 'broken' && f.pc.brokeBy !== 'tent') {
         const T = TYPES[f.pc.type];
-        return world.mode === 'hp' ? `${T.name}: прочность кончилась на ${f.pc.brokeAt.toFixed(1)} с` : `${T.name}: ветер у стен выше ${limitOf(world, f.pc)} м/с`;
+        return world.mode === 'hp' ? `${pname(f.pc)}: прочность кончилась на ${f.pc.brokeAt.toFixed(1)} с` : `${pname(f.pc)}: ветер у стен выше ${limitOf(world, f.pc)} м/с`;
       }
       return f.text;
     });
@@ -2586,9 +2598,35 @@ function finishRun() {
 function levelWon() {
   const L = LEVELS[st.level], gb = CH.map((_, ci) => gate(ci)), before = totalStars();
   const n = starsFor(world, L), wl = worstLoad(world), cuts = starCuts(L);
+  if (wl.pc) {
+    const lim = limitOf(world, wl.pc), load = wl.r * lim;
+    wl.ms = msFmt(load, cuts.map(c => c * lim)); wl.who = whichOf(wl.pc);
+    wl.many = world.pieces.filter(p => isHouse(TYPES[p.type]) && !p.broken).length > 1;
+    st.worst = { pc: wl.pc, t: wl.ms(load) };
+  }
   saveStars(st.level, n);
   const opened = CH.findIndex((_, ci) => gb[ci] !== 'open' && gate(ci) === 'open');
   return { gi: st.level, n, wl, cuts, before, opened, energy: world.target ? Math.round(world.energy) : null };
+}
+
+// числа в окне итога: столько знаков, чтобы «8 из 14» и «не больше 8» не спорили со звёздами
+function msFmt(load, cuts) {
+  let d = 0;
+  while (d < 2 && cuts.some(c => (load <= c) !== (+load.toFixed(d) <= +c.toFixed(d)))) d++;
+  return v => v.toFixed(d);
+}
+// какая это постройка, если таких несколько: «левая хижина» — как видно сейчас на экране
+function whichOf(pc) {
+  const nm = pname(pc), low = nm[0].toLowerCase() + nm.slice(1);
+  const same = world.pieces.filter(p => p.type === pc.type && !p.broken && pname(p) === nm);
+  if (same.length < 2) return low;
+  const at = p => { const c = pieceCells(p), x = c.reduce((a, q) => a + q[0], 0) / c.length + 0.5, y = c.reduce((a, q) => a + q[1], 0) / c.length + 0.5; return P(x, y, 0); };
+  const pts = same.map(at), span = k => Math.max(...pts.map(q => q[k])) - Math.min(...pts.map(q => q[k]));
+  const k = span(0) >= span(1) ? 0 : 1, order = same.map((p, i) => [p, pts[i][k]]).sort((a, b) => a[1] - b[1]).map(a => a[0]);
+  const i = order.indexOf(pc), n = order.length, fem = /[ая]$/.test(nm) && !/^Дом/.test(nm);
+  const W = k === 0 ? (fem ? ['левая', 'правая', 'средняя'] : ['левый', 'правый', 'средний']) : (fem ? ['верхняя', 'нижняя', 'средняя'] : ['верхний', 'нижний', 'средний']);
+  const pos = i === 0 ? W[0] : i === n - 1 ? W[1] : n === 3 ? W[2] : `${i + 1}-${fem ? 'я' : 'й'} ${k === 0 ? 'слева' : 'сверху'}`;
+  return `${pos} ${low}`;
 }
 
 // ---------- окна: итог уровня, новая глава ----------
@@ -2604,21 +2642,21 @@ function winWindow(r) {
   if (r.opened >= 0) pendingChap = r.opened;
   const outro = L.outro ? L.outro[L.outro.length - 1] : ['keeper', n === 3 ? 'Ни царапины. Так держать.' : 'Устояло. Идём дальше.'];
   const T = r.wl.pc ? TYPES[r.wl.pc.type] : null, lim = r.wl.pc ? limitOf(world, r.wl.pc) : 0;
-  const ms = v => Math.floor(v * lim);
+  const ms = r.wl.ms, cut = r.cuts.map(c => c * lim);
   const crit = [
     'Все постройки устояли',
-    T ? `${T.name}: ветер у стен до ${ms(r.cuts[1])} м/с` : 'Запас прочности',
-    T ? `Не больше ${ms(r.cuts[0])} м/с — как в лучшем решении` : 'Как в лучшем решении',
+    T ? `${pname(r.wl.pc)}: ветер у стен до ${ms(cut[1])} м/с` : 'Запас прочности',
+    T ? `Не больше ${ms(cut[0])} м/с — как в лучшем решении` : 'Как в лучшем решении',
   ];
   const nc = CH.findIndex((_, ci) => gate(ci) !== 'open'), tot = totalStars(), next = current();
   const prog = r.opened >= 0 ? `<div class="w-prog open">${icon('flag')}<b>Открыт остров «${CH[r.opened].name}»!</b></div>`
-    : nc >= 0 ? `<div class="w-prog"><span>${icon('star', 'on')}<b>${tot}</b>${tot > r.before ? `<em>+${tot - r.before}</em>` : ''}<span class="grow"></span>«${CH[nc].name}» — ${CH[nc].need} ★</span><div class="meter" style="--p:${Math.min(1, tot / Math.max(1, CH[nc].need))}"><span></span></div></div>` : '';
+    : nc >= 0 ? `<div class="w-prog"><span>${icon('star', 'on')}<b>${tot}</b>${tot > r.before ? `<em>+${tot - r.before}</em>` : ''}<span class="grow"></span>«${CH[nc].name}» — ${gateNeed(nc)}</span><div class="meter" style="--p:${Math.min(1, tot / Math.max(1, CH[nc].need))}"><span></span></div></div>` : '';
   const nextTxt = r.opened >= 0 ? `остров «${CH[r.opened].name}»` : next != null ? `${LEVELS[next]._ix + 1} · ${LEVELS[next].name}` : 'на карту';
   showWin(`<div class="w-a"><svg class="w-art" viewBox="0 0 300 170" aria-hidden="true">${plate(L._ci, 150, 92, 110, 20)}${gust(18, 46, 120)}</svg>
       <span class="ch">${esc(C.name)} · ${L._ix + 1} из ${C.levels.length} · ${esc(L.name)}</span><h2>${n === 3 ? 'Ни царапины!' : 'Устояло!'}</h2>
       <div class="bigstars" aria-label="${n} из 3 звёзд">${[0, 1, 2].map(i => `<span class="bs ${i < n ? 'on' : ''}" style="animation-delay:${(0.25 + i * 0.3).toFixed(2)}s">${icon('star')}</span>`).join('')}</div></div>
     <div class="w-b">
-      ${T ? `<p class="w-load">Самой нагруженной — ${esc(T.name.toLowerCase())}: ветер у стен <b>${Math.round(r.wl.r * lim)}</b> из ${lim} м/с.${r.energy != null ? ` Энергия <b>${r.energy}</b> из ${world.target}.` : ''}</p>` : ''}
+      ${T ? `<p class="w-load">Тяжелее всех — ${esc(r.wl.who)}: ветер у стен <b>${ms(r.wl.r * lim)}</b> из ${lim} м/с${r.wl.many ? ' (на поле — жёлтая метка)' : ''}.${r.energy != null ? ` Энергия <b>${r.energy}</b> из ${world.target}.` : ''}</p>` : ''}
       <ul class="crit">${crit.map((t, i) => `<li class="${i < n ? 'on' : ''}">${icon('star', i < n ? 'on' : 'off')}${esc(t)}</li>`).join('')}</ul>
       <div class="w-say">${avaHtml(outro[0])}<p>${esc(outro[1])}<cite>— ${esc(CHARS[outro[0]].name)}</cite></p></div>
       ${prog}
@@ -2703,6 +2741,8 @@ const chapterStars = ci => CH[ci].levels.reduce((a, i) => a + starsOf(i), 0);
 const chapterPassed = ci => CH[ci].levels.filter(isDone).length;
 const chapterDone = ci => CH[ci].levels.every(isDone);
 // остров: open — открыт; stars — прошлый пройден, но звёзд мало; locked — прошлый не пройден
+// что нужно для острова — словами: «18 ★ и финал «Буря»», пока финал прошлого не пройден
+const gateNeed = ci => chapterDone(ci - 1) ? `${CH[ci].need} ★` : `${CH[ci].need} ★ и финал «${LEVELS[CH[ci - 1].levels[CH[ci - 1].levels.length - 1]].name}»`;
 const gate = ci => (ci === 0 || st.dev ? 'open' : !chapterDone(ci - 1) ? 'locked' : totalStars() >= CH[ci].need ? 'open' : 'stars');
 // уровень: done — пройден, open — можно играть, locked — закрыт; current — первый открытый, он же «Играть»
 function status(i) {
@@ -2860,7 +2900,7 @@ function mapOverlays() {
   let h = '';
   CH.forEach((C, ci) => {
     const open = gate(ci) === 'open';
-    const sub = open ? `${icon('star', 'on')}${chapterStars(ci)}/${C.levels.length * 3} · ${chapterPassed(ci)} из ${C.levels.length}` : `${icon('lock')}нужно ${C.need} ★`;
+    const sub = open ? `${icon('star', 'on')}${chapterStars(ci)}/${C.levels.length * 3} · ${chapterPassed(ci)} из ${C.levels.length}` : `${icon('lock')}нужно ${gateNeed(ci)}`;
     h += `<button type="button" class="plabel ${open ? '' : 'shut'} ${ci === curC ? 'here' : ''}" data-act="${open ? 'zoom' : 'gate'}" data-ci="${ci}" data-anchor="${ci}">
       <span class="num" style="background:${C.deep}">${ci + 1}</span><span class="t"><b>${esc(C.name)}</b><small>${sub}</small></span></button>`;
   });
@@ -3627,11 +3667,15 @@ function drawLabels() {
       // почему сломалось: над домом в стоп-кадре, на месте дома — после прогона
       const c = pieceCells(pc), mx = c.reduce((a, q) => a + q[0], 0) / c.length + 0.5, my = c.reduce((a, q) => a + q[1], 0) / c.length + 0.5;
       const why = pc.brokeBy === 'tent' ? 'удар палаткой' : `ветер > ${limitOf(world, pc)} м/с`;
-      if (isFrozen(pc)) { ctx.font = `600 13px ${mono}`; tag(mx, my, T.h + 1.1, `${T.name}: ${why}`, 'rgba(214,59,69,.95)', '#fff'); ctx.font = `600 11px ${mono}`; }
+      if (isFrozen(pc)) { ctx.font = `600 13px ${mono}`; tag(mx, my, T.h + 1.1, `${pname(pc)}: ${why}`, 'rgba(214,59,69,.95)', '#fff'); ctx.font = `600 11px ${mono}`; }
       else if (!st.freeze) tag(mx, my, 0.35, `сдуло · ${why}`, 'rgba(214,59,69,.88)', '#fff');
       continue;
     }
     if (pc.broken) continue;
+    if (st.worst && st.worst.pc === pc && st.phase !== 'run') {
+      const c = pieceCells(pc), mx = c.reduce((a, q) => a + q[0], 0) / c.length + 0.5, my = c.reduce((a, q) => a + q[1], 0) / c.length + 0.5;
+      tag(mx, my, T.h + 0.55, st.phase === 'build' ? `было ${st.worst.t} м/с` : `тяжелее всех · ${st.worst.t} м/с`, 'rgba(247,194,27,.95)', '#1c1600');
+    }
     if (world.target && T.kind === 'mill' && st.phase !== 'build') tag(pc.x + 0.5, pc.y + 0.5, T.h + 0.75, `⚡${Math.round(pc.energy || 0)}`, 'rgba(255,210,63,.92)', '#1c1600');
     if (world.mods.cohesion && isHouse(T) && st.phase === 'build' && pc.adj) {
       const c = pieceCells(pc); const mx = c.reduce((a, q) => a + q[0], 0) / c.length + 0.5, my = c.reduce((a, q) => a + q[1], 0) / c.length + 0.5;
@@ -3923,7 +3967,7 @@ if (st.agent) {
         window: text('#win'), talk: text('#talkSlot'), result: text('#resultSlot'), toast: text('#toast'),
         stock: game ? Object.entries(st.inv).filter(([, n]) => n > 0).map(([t, n]) => `${TYPES[t].name} ×${n}`) : [],
         mine: game ? world.pieces.filter(p => !p.fixed).map(p => `${TYPES[p.type].name}: ${where(p)}${p.broken ? ' (сломан)' : ''}`) : [],
-        fixed: game ? world.pieces.filter(p => p.fixed).map(p => `${TYPES[p.type].name}: ${where(p)}${p.broken ? ' (сломан)' : ''}`) : [],
+        fixed: game ? world.pieces.filter(p => p.fixed).map(p => `${pname(p)}: ${where(p)}${p.broken ? ' (сломан)' : ''}`) : [],
         // обучение: подсвеченные клетки, куда звать забор (человек видит их пульсирующей рамкой)
         highlight: game && st.tut === 'fence' && st.phase === 'build' && fenceState() !== 'ok' ? pieceCells(tutSol()).map(c => cellName(...c)).join(' ') : null,
         buttons: [...document.querySelectorAll('button')].filter(shown).map(b => (b.innerText || b.getAttribute('aria-label') || '').trim().split('\n')[0]).filter(Boolean),
@@ -3994,7 +4038,7 @@ if (st.agent) {
       let firstBreak = null;
       for (let i = 0; st.phase === 'run' && i < 60 * 600; i++) {
         if (st.freeze) {
-          if (!firstBreak) firstBreak = st.freeze.pcs.map(p => `${TYPES[p.type].name} ${where(p)} на ${world.t.toFixed(1)} с`).join(', ') || null;
+          if (!firstBreak) firstBreak = st.freeze.pcs.map(p => `${pname(p)} ${where(p)} на ${world.t.toFixed(1)} с`).join(', ') || null;
           for (const pc of st.freeze.pcs) spawnDebris(pc); st.freeze = null;
         }
         clock += 1 / 60; simTick(1 / 60);
