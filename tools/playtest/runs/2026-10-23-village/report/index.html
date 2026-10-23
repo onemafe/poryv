@@ -1,0 +1,379 @@
+<style>
+.pt { display: grid; gap: var(--cds-gap-lg); font-family: var(--font-anthropic-sans); max-width: 72rem; margin-inline: auto; }
+.pt-head { display: grid; gap: var(--cds-gap-sm); }
+.pt-head h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+.pt-take { margin: 0; color: var(--color-fg-muted); font-size: var(--cds-font-size-body); max-width: 62ch; line-height: 1.5; }
+.pt-take b, .pt-tile b { font-weight: 600; color: var(--color-fg); }
+.pt-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: var(--cds-gap-md); }
+.pt-tile { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-md) var(--cds-pad-lg); display: grid; gap: var(--cds-gap-xs); }
+.pt-tile .lbl { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.pt-tile .big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
+.pt-tile .sub { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.pt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--cds-gap-md); }
+.pt-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: grid; gap: var(--cds-gap-sm); align-content: start; min-width: 0; }
+.pt-card.wide { grid-column: 1 / -1; }
+.pt-card h2 { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); }
+.pt-note { margin: 0; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); line-height: 1.45; max-width: 75ch; }
+.pt-chart { position: relative; min-height: 300px; }
+.pt-chart svg { display: block; }
+.pt-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); line-height: 1.5; min-width: 11rem; z-index: 2; }
+.pt-tip .t { color: var(--cds-text-secondary); }
+.pt-tip .row { display: flex; justify-content: space-between; gap: var(--cds-gap-md); font-variant-numeric: tabular-nums; }
+.pt-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.pt-legend span { display: inline-flex; align-items: center; gap: var(--cds-gap-xs); }
+.pt-legend i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; }
+.pt-heat-wrap { overflow-x: auto; }
+.pt-heat { display: grid; grid-template-columns: minmax(9rem, 1.4fr) repeat(10, minmax(2.6rem, 1fr)); gap: 2px; min-width: 38rem; font-size: var(--cds-font-size-caption); }
+.pt-heat .hd { color: var(--color-fg-muted); text-align: center; padding: var(--cds-pad-xs) 0; line-height: 1.2; }
+.pt-heat .who { padding: var(--cds-pad-xs) var(--cds-pad-sm) var(--cds-pad-xs) 0; display: grid; line-height: 1.25; }
+.pt-heat .who small { color: var(--color-fg-muted); }
+.pt-heat .c { border-radius: 4px; display: grid; place-items: center; text-align: center; padding: var(--cds-pad-xs) 2px; min-height: 2.6rem; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.pt-heat .c b { font-size: var(--cds-font-size-body); font-weight: 600; }
+.pt-heat .c small { color: var(--color-fg-muted); }
+.pt-heat .c.quit { outline: 2px solid var(--cds-chart-status-critical); outline-offset: -2px; }
+.pt-heat .c.after { opacity: .55; }
+.pt-heat .c .q { color: var(--color-bad); font-weight: 600; }
+.pt-table-wrap { max-height: 32rem; overflow: auto; }
+.pt-table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-caption); }
+.pt-table th { position: sticky; top: 0; background: var(--color-panel); text-align: left; color: var(--color-fg-muted); font-weight: 500; padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); }
+.pt-table td { padding: var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); vertical-align: top; line-height: 1.4; }
+.pt-table td.area { white-space: nowrap; color: var(--color-fg-muted); }
+.pt-table td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pt-bar { display: inline-block; height: 8px; border-radius: 4px; background: var(--cds-chart-muted); margin-right: var(--cds-gap-xs); vertical-align: middle; }
+.pt-bar.hot { background: var(--cds-chart-status-critical); }
+.pt-foot { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); line-height: 1.5; max-width: 80ch; margin: 0; }
+[data-dash-source-state=empty] { color: transparent; }
+[data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+@media (max-width: 40rem) { .pt-table td.who-col, .pt-table th.who-col { display: none; } }
+</style>
+
+<div class="pt">
+  <header class="pt-head">
+    <h1 id="title">ИИ-плейтест Деревни</h1>
+    <p class="pt-take" id="takeaway">
+      <span data-source="summary" data-row="0" data-field="personas" class="dash-skeleton">—</span> портретов игроков прошли 10 уровней острова «Деревня» с нуля.
+      Ушёл бы <span data-source="summary" data-row="0" data-field="quits">—</span>: <span data-source="summary" data-row="0" data-field="quitWho">—</span>.
+      Кривая выходит «полкой и обрывом», а не пилой: трудные только <span data-source="summary" data-row="0" data-field="hardest">—</span>, остальные почти все проходят с первой попытки.
+    </p>
+  </header>
+
+  <section class="pt-tiles" aria-label="Итоги">
+    <div class="pt-tile"><span class="lbl">Ушли бы из игры</span><span class="big" data-source="summary" data-row="0" data-field="quits">—</span><span class="sub" data-source="summary" data-row="0" data-field="quitWho">—</span></div>
+    <div class="pt-tile"><span class="lbl">Уровней с первой попытки</span><span class="big" data-source="summary" data-row="0" data-field="firstTryShare">—</span><span class="sub">доля пар «портрет × уровень»</span></div>
+    <div class="pt-tile"><span class="lbl">Подсказок взяли</span><span class="big" data-source="summary" data-row="0" data-field="hints">—</span><span class="sub" data-source="summary" data-row="0" data-field="hintWho">—</span></div>
+    <div class="pt-tile"><span class="lbl">Уровней «скучно»</span><span class="big" data-source="summary" data-row="0" data-field="bored">—</span><span class="sub">отметок скуки до первой победы</span></div>
+  </section>
+
+  <div class="pt-grid">
+    <section class="pt-card wide" id="curve-card">
+      <h2>Кривая сложности против целевой пилы</h2>
+      <p class="pt-note">Попытка, с которой портрет впервые прошёл уровень. Линия — медиана семи портретов, вертикальная черта — от самого лёгкого до самого трудного прохождения. Серый коридор — целевая пила для браузерной головоломки: спад на уровне с новой механикой, пик в финале острова.</p>
+      <div class="pt-legend" aria-hidden="true">
+        <span><i class="lg-med"></i>медиана портретов</span>
+        <span><i class="lg-rng"></i>разброс портретов</span>
+        <span><i class="lg-tgt"></i>целевой коридор</span>
+      </div>
+      <div class="pt-chart dash-skeleton" id="curve" data-source="curve target playtest"></div>
+    </section>
+
+    <section class="pt-card wide" id="heat-card">
+      <h2>Кто где споткнулся</h2>
+      <p class="pt-note">Число — с какой попытки первая победа, «+п» — подсказки, цвет — чем больше попыток, тем темнее. Красная рамка — здесь портрет ушёл бы из игры; бледные клетки — после ухода («вернулся завтра»). «скука» — отметил скуку до победы.</p>
+      <div class="pt-heat-wrap"><div class="pt-heat dash-skeleton" id="heat" data-source="playtest"></div></div>
+    </section>
+
+    <section class="pt-card" id="tol-card">
+      <h2>Допуск решения</h2>
+      <p class="pt-note">В какой доле мест может стоять самая «тесная» фигура проверенного решения (<code>tools/tolerance.js</code>). Тесный допуск ещё не трудно: в «Соседках» 4 места из 131, а все прошли с первого хода — реплика подсказывает.</p>
+      <div class="pt-chart dash-skeleton" id="tol" data-source="tolmin"></div>
+    </section>
+
+    <section class="pt-card" id="who-card">
+      <h2>Портреты</h2>
+      <p class="pt-note">Агент играет по скриншотам в роли портрета; правила чтения, терпения и подсказок заданы заранее. «Руками» — мышью как пальцем в рамке телефона 412 px.</p>
+      <div class="pt-chart dash-skeleton" id="who" data-source="personaSum" style="min-height: 14rem"></div>
+    </section>
+
+    <section class="pt-card wide" id="findings-card">
+      <h2>Что нашли</h2>
+      <p class="pt-note">Находки, на которые наткнулись несколько портретов. Все пункты записаны в RELEASE_PLAN.md, этап 0.</p>
+      <div class="pt-table-wrap">
+        <table class="pt-table" id="findings" data-source="findings" data-row-key="id">
+          <thead><tr><th data-field="personas">Портретов из 7</th><th data-field="area">Где</th><th data-field="finding">Что</th><th data-field="who" class="who-col">Кто</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <p class="pt-foot">Это мнение агентов, а не людей: ИИ-игроки хорошо угадывают, какой уровень труднее соседнего, но не точный процент прохождения. Прогон досчитывается сразу, поэтому анимацию ветра агенты не видят. * Светлана играла в раскладке ПК: телефонная рамка появилась после её прогона.</p>
+</div>
+
+<script>
+// ---- вычисления по данным ----
+dash.calc('curve', {
+  title: 'Медиана попыток по уровням',
+  description: 'По каждому уровню: медиана, минимум и максимум попытки первой победы среди портретов.',
+  inputs: ['playtest'],
+  fn: (playtest) => {
+    const by = d3.group(playtest.map(r => ({ ...r, n: Number(r.n), runsToWin: Number(r.runsToWin) })), r => r.n);
+    return [...by].sort((a, b) => a[0] - b[0]).map(([n, rs]) => ({
+      n, level: rs[0].level,
+      median: d3.median(rs, r => r.runsToWin), min: d3.min(rs, r => r.runsToWin), max: d3.max(rs, r => r.runsToWin),
+      hints: d3.sum(rs, r => Number(r.hints)),
+    }));
+  },
+});
+dash.calc('summary', {
+  title: 'Итоги прогона',
+  description: 'Сколько портретов, кто ушёл бы, доля уровней с первой попытки, подсказки, скука, самые трудные уровни по медиане.',
+  inputs: ['playtest'],
+  fn: (playtest) => {
+    const rs = playtest.map(r => ({ ...r, n: Number(r.n), runsToWin: Number(r.runsToWin), hints: Number(r.hints) }));
+    const quits = rs.filter(r => r.quit === true || r.quit === 'true');
+    const hinted = d3.rollups(rs.filter(r => r.hints > 0), v => d3.sum(v, r => r.hints), r => r.personaName);
+    const med = d3.rollups(rs, v => d3.median(v, r => r.runsToWin), r => r.level).sort((a, b) => b[1] - a[1]);
+    return [{
+      personas: new Set(rs.map(r => r.persona)).size,
+      quits: quits.length,
+      quitWho: quits.map(r => `${r.personaName.split(',')[0]} — после «${r.level}»`).join('; ') || 'никто',
+      firstTryShare: d3.format('.0%')(rs.filter(r => r.runsToWin === 1).length / rs.length),
+      hints: d3.sum(rs, r => r.hints),
+      hintWho: hinted.map(([p, h]) => `${p.split(',')[0]} ${h}`).join(', '),
+      bored: rs.filter(r => r.bored === true || r.bored === 'true').length,
+      hardest: med.filter(([, m]) => m > 1).map(([l]) => `«${l}»`).join(' и '),
+    }];
+  },
+});
+dash.calc('tolmin', {
+  title: 'Самая тесная фигура решения',
+  description: 'По каждому уровню — фигура решения с наименьшей долей мест, где она может стоять.',
+  inputs: ['tolerance'],
+  fn: (tolerance) => [...d3.group(tolerance, r => Number(r.n))].sort((a, b) => a[0] - b[0]).map(([n, rs]) => {
+    const t = rs.reduce((a, b) => (Number(b.share) < Number(a.share) ? b : a));
+    return { n, level: t.level, share: Number(t.share), ok: Number(t.ok), of: Number(t.of) };
+  }),
+});
+dash.calc('personaSum', {
+  title: 'Итог по портретам',
+  description: 'По каждому портрету: попыток до побед всего, подсказок, звёзд, ушёл ли.',
+  inputs: ['playtest'],
+  fn: (playtest) => [...d3.group(playtest, r => r.persona)].map(([p, rs]) => ({
+    persona: p, personaName: rs[0].personaName, device: rs[0].device, order: Number(rs[0].personaOrder),
+    runs: d3.sum(rs, r => Number(r.runsToWin)), hints: d3.sum(rs, r => Number(r.hints)), stars: d3.sum(rs, r => Number(r.stars)),
+    quitAt: (rs.find(r => r.quit === true || r.quit === 'true') || {}).level || null,
+  })).sort((a, b) => a.order - b.order),
+});
+
+// ---- рисование ----
+const fmt = d3.format(',');
+const fmt1 = d3.format('.1~f');
+const pct = d3.format('.0%');
+const short = (s) => (s.length > 11 ? s.slice(0, 10) + '…' : s);
+
+function failed(el, st) {
+  el.classList.remove('dash-skeleton');
+  el.innerHTML = '';
+  if (st.status === 'error' || st.status === 'connect') {
+    const d = document.createElement('div');
+    d.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:.5rem;min-height:inherit;color:var(--color-fg-muted);font-size:var(--cds-font-size-caption)';
+    d.innerHTML = '<span style="width:.375rem;height:.375rem;border-radius:50%;background:var(--color-bad)"></span>';
+    d.append('Failed to load');
+    el.append(d);
+  }
+}
+
+function fillText() {
+  const s = dash.data('summary');
+  document.querySelectorAll('[data-source="summary"]').forEach(el => {
+    if (s.status !== 'ok') { el.textContent = '—'; return; }
+    el.classList.remove('dash-skeleton');
+    const v = s.data[0][el.dataset.field];
+    el.textContent = typeof v === 'number' ? fmt(v) : v;
+  });
+}
+
+function drawCurve() {
+  const el = document.getElementById('curve');
+  const c = dash.data('curve'), t = dash.data('target'), p = dash.data('playtest');
+  if (c.status !== 'ok' || t.status !== 'ok' || p.status !== 'ok') { if ([c, t, p].some(x => x.status === 'error' || x.status === 'connect')) failed(el, [c, t, p].find(x => x.status !== 'ok')); return; }
+  el.classList.remove('dash-skeleton');
+  el.innerHTML = '';
+  const W = Math.max(320, el.clientWidth), H = 300;
+  const m = { t: 14, r: 12, b: 46, l: 34 };
+  const rows = c.data, tg = t.data.map(r => ({ n: Number(r.n), lo: Number(r.lo), hi: Number(r.hi) }));
+  const yMax = Math.max(5, d3.max(rows, r => r.max), d3.max(tg, r => r.hi)) + 0.5;
+  const x = d3.scaleBand(rows.map(r => r.n), [m.l, W - m.r]).padding(0.2);
+  const y = d3.scaleLinear([0.5, yMax], [H - m.b, m.t]);
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img')
+    .attr('aria-label', 'Медиана попыток до первой победы по уровням Деревни на фоне целевого коридора');
+  svg.append('g').selectAll('line').data(d3.range(1, Math.floor(yMax) + 1)).join('line')
+    .attr('x1', m.l).attr('x2', W - m.r).attr('y1', d => y(d)).attr('y2', d => y(d))
+    .attr('stroke', 'var(--cds-chart-grid)').attr('stroke-width', 1);
+  svg.append('g').selectAll('text').data(d3.range(1, Math.floor(yMax) + 1)).join('text')
+    .attr('x', m.l - 8).attr('y', d => y(d)).attr('dy', '0.32em').attr('text-anchor', 'end')
+    .attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text(d => d);
+  // целевой коридор
+  const cx = n => x(n) + x.bandwidth() / 2;
+  const area = d3.area().x(d => cx(d.n)).y0(d => y(d.lo)).y1(d => y(d.hi));
+  svg.append('path').datum(tg).attr('d', area).attr('fill', 'var(--cds-chart-muted)').attr('fill-opacity', 0.35);
+  // разброс и медиана
+  svg.append('g').selectAll('line').data(rows).join('line')
+    .attr('x1', d => cx(d.n)).attr('x2', d => cx(d.n)).attr('y1', d => y(d.min)).attr('y2', d => y(d.max))
+    .attr('stroke', 'var(--color-fg-muted)').attr('stroke-width', 2).attr('stroke-linecap', 'round');
+  svg.append('path').datum(rows).attr('fill', 'none').attr('stroke', dash.colors[0]).attr('stroke-width', 2)
+    .attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round').attr('d', d3.line().x(d => cx(d.n)).y(d => y(d.median)));
+  svg.append('g').selectAll('circle').data(rows).join('circle')
+    .attr('cx', d => cx(d.n)).attr('cy', d => y(d.median)).attr('r', 4.5)
+    .attr('fill', dash.colors[0]).attr('stroke', 'var(--color-panel)').attr('stroke-width', 2);
+  // подписи уровней
+  const xl = svg.append('g');
+  rows.forEach(r => {
+    xl.append('text').attr('x', cx(r.n)).attr('y', H - m.b + 16).attr('text-anchor', 'middle')
+      .attr('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)').text(r.n);
+    if (x.bandwidth() > 46) xl.append('text').attr('x', cx(r.n)).attr('y', H - m.b + 32).attr('text-anchor', 'middle')
+      .attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text(short(r.level));
+  });
+  // подсказка при наведении
+  const tip = d3.select(el).append('div').attr('class', 'pt-tip').style('display', 'none');
+  const byLevel = d3.group(p.data, r => Number(r.n));
+  svg.append('g').selectAll('rect').data(rows).join('rect')
+    .attr('x', d => x(d.n)).attr('y', m.t).attr('width', x.bandwidth()).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+    .on('mousemove', (ev, d) => {
+      const tr = tg.find(g => g.n === d.n);
+      const list = (byLevel.get(d.n) || []).slice().sort((a, b) => Number(a.personaOrder) - Number(b.personaOrder));
+      tip.html('');
+      tip.append('div').attr('class', 't').text(`${d.n} · ${d.level}`);
+      tip.append('div').attr('class', 'row').call(r => { r.append('span').text('медиана'); r.append('b').text(fmt1(d.median)); });
+      if (tr) tip.append('div').attr('class', 'row').call(r => { r.append('span').text('цель'); r.append('span').text(`${fmt1(tr.lo)}–${fmt1(tr.hi)}`); });
+      list.forEach(it => tip.append('div').attr('class', 'row').call(r => {
+        r.append('span').text(it.personaName.split(',')[0]);
+        r.append('span').text(`${it.runsToWin}${Number(it.hints) ? ` +${it.hints}п` : ''}${it.quit === true || it.quit === 'true' ? ' · ушёл' : ''}`);
+      }));
+      const [px, py] = d3.pointer(ev, el);
+      const tw = tip.node().offsetWidth || 180;
+      tip.style('display', null).style('left', `${Math.min(Math.max(0, px + 12), el.clientWidth - tw)}px`).style('top', `${Math.max(0, py - 20)}px`);
+    })
+    .on('mouseleave', () => tip.style('display', 'none'));
+}
+
+function drawHeat() {
+  const el = document.getElementById('heat');
+  const p = dash.data('playtest');
+  if (p.status !== 'ok') { if (p.status === 'error' || p.status === 'connect') failed(el, p); return; }
+  el.classList.remove('dash-skeleton');
+  el.innerHTML = '';
+  const rows = p.data;
+  const levels = [...d3.group(rows, r => Number(r.n))].sort((a, b) => a[0] - b[0]).map(([n, rs]) => ({ n, level: rs[0].level }));
+  const people = [...d3.group(rows, r => r.persona)].map(([id, rs]) => ({ id, name: rs[0].personaName, device: rs[0].device, order: Number(rs[0].personaOrder) })).sort((a, b) => a.order - b.order);
+  const maxRuns = d3.max(rows, r => Number(r.runsToWin)) || 1;
+  const head = document.createElement('div'); head.className = 'hd'; el.append(head);
+  levels.forEach(l => { const h = document.createElement('div'); h.className = 'hd'; h.textContent = `${l.n}`; h.title = l.level; el.append(h); });
+  people.forEach(pp => {
+    const w = document.createElement('div'); w.className = 'who';
+    const b = document.createElement('span'); b.textContent = pp.name;
+    const s = document.createElement('small'); s.textContent = pp.device;
+    w.append(b, s); el.append(w);
+    levels.forEach(l => {
+      const r = rows.find(x => x.persona === pp.id && Number(x.n) === l.n);
+      const c = document.createElement('div'); c.className = 'c';
+      if (!r) { el.append(c); return; }
+      const runs = Number(r.runsToWin), quit = r.quit === true || r.quit === 'true', after = r.afterQuit === true || r.afterQuit === 'true';
+      const k = maxRuns > 1 ? (runs - 1) / (maxRuns - 1) : 0;
+      c.style.background = `color-mix(in srgb, ${dash.colors[0]} ${Math.round(8 + k * 52)}%, var(--color-panel))`;
+      if (quit) c.classList.add('quit');
+      if (after) c.classList.add('after');
+      c.title = `${pp.name} · ${l.level}`;
+      const bb = document.createElement('b'); bb.textContent = String(runs);
+      bb.dataset.source = 'playtest'; bb.dataset.field = 'runsToWin';
+      bb.dataset.where = `persona=${encodeURIComponent(pp.id)}&n=${l.n}`;
+      c.append(bb);
+      const extra = [];
+      if (Number(r.hints)) extra.push(`+${r.hints}п`);
+      if (r.bored === true || r.bored === 'true') extra.push('скука');
+      if (extra.length) { const sm = document.createElement('small'); sm.textContent = extra.join(' '); c.append(sm); }
+      if (quit) { const q = document.createElement('small'); q.className = 'q'; q.textContent = 'ушёл'; c.append(q); }
+      el.append(c);
+    });
+  });
+}
+
+function drawTol() {
+  const el = document.getElementById('tol');
+  const t = dash.data('tolmin');
+  if (t.status !== 'ok') { if (t.status === 'error' || t.status === 'connect') failed(el, t); return; }
+  el.classList.remove('dash-skeleton');
+  el.innerHTML = '';
+  const rows = t.data;
+  const W = Math.max(280, el.clientWidth), rowH = 26, m = { t: 4, r: 64, b: 4, l: 0 };
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('role', 'img').attr('aria-label', 'Допуск самой тесной фигуры решения по уровням');
+  const lab = svg.append('g');
+  rows.forEach(r => lab.append('text').text(`${r.n} ${r.level}`).style('font-size', 'var(--cds-font-size-caption)'));
+  const lw = d3.max(lab.selectAll('text').nodes(), n => n.getComputedTextLength()) + 10;
+  lab.remove();
+  m.l = lw;
+  const H = m.t + m.b + rows.length * rowH;
+  svg.attr('viewBox', `0 0 ${W} ${H}`);
+  const x = d3.scaleLinear([0, Math.max(0.2, d3.max(rows, r => r.share))], [m.l, W - m.r]);
+  const yy = (i) => m.t + i * rowH;
+  const g = svg.append('g');
+  rows.forEach((r, i) => {
+    g.append('text').attr('x', m.l - 10).attr('y', yy(i) + rowH / 2).attr('dy', '0.32em').attr('text-anchor', 'end')
+      .attr('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)').text(`${r.n} ${r.level}`);
+    g.append('rect').attr('x', m.l).attr('y', yy(i) + 6).attr('height', rowH - 12).attr('rx', 4)
+      .attr('width', Math.max(4, x(r.share) - m.l))
+      .attr('fill', r.share < 0.06 ? 'var(--cds-chart-status-critical)' : dash.colors[0]);
+    g.append('text').attr('x', Math.max(m.l + 4, x(r.share)) + 6).attr('y', yy(i) + rowH / 2).attr('dy', '0.32em')
+      .attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').text(`${r.ok} из ${r.of}`);
+  });
+  el.style.minHeight = `${H}px`;
+}
+
+function drawWho() {
+  const el = document.getElementById('who');
+  const s = dash.data('personaSum');
+  if (s.status !== 'ok') { if (s.status === 'error' || s.status === 'connect') failed(el, s); return; }
+  el.classList.remove('dash-skeleton');
+  el.innerHTML = '';
+  const tb = document.createElement('table'); tb.className = 'pt-table';
+  tb.dataset.source = 'personaSum'; tb.dataset.rowKey = 'persona';
+  const cols = [['personaName', 'Портрет'], ['device', 'Экран и ввод'], ['runs', 'Попыток'], ['hints', 'Подсказок'], ['stars', '★'], ['quitAt', 'Ушёл бы после']];
+  const thead = tb.createTHead().insertRow();
+  cols.forEach(([f, t]) => { const th = document.createElement('th'); th.dataset.field = f; th.textContent = t; thead.append(th); });
+  const body = tb.createTBody();
+  s.data.forEach(r => {
+    const tr = body.insertRow(); tr.dataset.key = r.persona;
+    cols.forEach(([f]) => {
+      const td = tr.insertCell();
+      if (f === 'runs' || f === 'hints' || f === 'stars') td.className = 'n';
+      td.textContent = f === 'quitAt' ? (r.quitAt || '—') : (typeof r[f] === 'number' ? fmt(r[f]) : r[f]);
+    });
+  });
+  el.append(tb);
+}
+
+function drawFindings() {
+  const tb = document.querySelector('#findings tbody');
+  const f = dash.data('findings');
+  tb.innerHTML = '';
+  if (f.status !== 'ok') return;
+  const rows = f.data.slice().sort((a, b) => Number(b.personas) - Number(a.personas));
+  rows.forEach(r => {
+    const tr = tb.insertRow(); tr.dataset.key = r.id;
+    const n = tr.insertCell(); n.className = 'n';
+    const bar = document.createElement('span'); bar.className = 'pt-bar' + (Number(r.personas) >= 5 ? ' hot' : '');
+    bar.style.width = `${Number(r.personas) * 8}px`;
+    n.append(bar, document.createTextNode(String(r.personas)));
+    const a = tr.insertCell(); a.className = 'area'; a.textContent = r.area;
+    const w = tr.insertCell(); w.textContent = r.finding;
+    const who = tr.insertCell(); who.className = 'who-col'; who.textContent = r.who;
+  });
+}
+
+// легенда — цвета из тех же токенов
+document.querySelector('.lg-med').style.background = dash.colors[0];
+document.querySelector('.lg-rng').style.background = 'var(--color-fg-muted)';
+document.querySelector('.lg-tgt').style.cssText += ';background:var(--cds-chart-muted);opacity:.5';
+
+dash.onData(() => { fillText(); drawCurve(); drawHeat(); drawTol(); drawWho(); drawFindings(); });
+</script>
