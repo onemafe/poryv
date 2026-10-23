@@ -248,8 +248,9 @@ body:not(.dev) .dev { display: none !important; }
   background: var(--ink); color: #fff; font-size: 13px; padding: 9px 14px; border-radius: 10px; box-shadow: 0 8px 24px rgba(23, 33, 44, 0.3); text-align: center; pointer-events: none; }
 
 /* ===== карта островов ===== */
-#map { position: fixed; inset: 0; z-index: 20; background: linear-gradient(180deg, #a9bccd 0%, #c3d3e0 30%, #d3e0ea 100%); }
-#map > svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; } /* место между панелями задаёт mapFrame() */
+#map { --mcol: 520px; position: fixed; inset: 0; z-index: 20; background: linear-gradient(180deg, #a9bccd 0%, #c3d3e0 30%, #d3e0ea 100%); } /* --mcol — общая ширина шапки, карточки острова и «Играть» */
+#map > svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; /* место между панелями задаёт mapFrame(); края море растворяет в фоне */
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(180deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
 .mov { position: absolute; inset: 0; pointer-events: none; }
 .mov > * { pointer-events: auto; }
 .plate { cursor: pointer; }
@@ -263,7 +264,7 @@ body:not(.dev) .dev { display: none !important; }
 .spin { animation: spin 4s linear infinite; transform-box: fill-box; transform-origin: 50% 50%; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .mtop-w { position: absolute; left: 0; right: 0; top: 0; z-index: 10; padding: var(--pad-t) var(--pad-r) 0 var(--pad-l); pointer-events: none; display: grid; gap: 8px; justify-items: center; }
-.mtop { display: flex; align-items: center; gap: 8px; pointer-events: auto; width: 100%; max-width: 640px; }
+.mtop { display: flex; align-items: center; gap: 8px; pointer-events: auto; width: 100%; max-width: var(--mcol); padding: 4px 14px 0; } /* отступ — как у содержимого карточки под ней */
 .brand { display: grid; line-height: 1.1; margin-right: auto; min-width: 0; }
 .brand b { font: 400 17px var(--f-display); letter-spacing: 0.04em; }
 .brand span { font: 500 10px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -307,7 +308,11 @@ body:not(.dev) .dev { display: none !important; }
 .navb.shut .disc { border-color: rgba(30, 50, 75, 0.25); color: var(--muted); }
 .navb .cap { font: 600 12px var(--f-body); background: var(--panel-solid); border-radius: 8px; padding: 2px 8px; box-shadow: 0 3px 10px rgba(30, 50, 75, 0.16); white-space: nowrap; display: flex; align-items: center; gap: 4px; }
 .navb .cap .i { width: 13px; height: 13px; }
-.navb.back .disc { border-color: var(--ink); }
+/* «Все острова» — тёмная плашка в строку, чтобы не путать с белыми кружками уровней */
+.navb.back { grid-auto-flow: column; align-items: center; gap: 8px; height: 48px; padding: 0 18px 0 8px; border-radius: 999px; background: var(--ink); color: #fff; box-shadow: 0 8px 22px rgba(23, 33, 44, 0.35); }
+.navb.back .disc { width: 32px; height: 32px; border: 0; background: rgba(255, 255, 255, 0.16); box-shadow: none; }
+.navb.back .disc .i { width: 20px; height: 20px; }
+.navb.back .cap { font-size: 14px; padding: 0; background: none; box-shadow: none; }
 .idots { position: absolute; z-index: 4; display: grid; gap: 9px; transform: translate(-50%, -50%); }
 .idot { position: relative; width: 12px; height: 12px; border-radius: 50%; padding: 0; border: 2px solid #fff; background: rgba(30, 50, 75, 0.28); box-shadow: 0 2px 6px rgba(30, 50, 75, 0.25); cursor: pointer; }
 .idot::before { content: ''; position: absolute; width: 32px; height: 32px; margin: -12px 0 0 -12px; } /* палец промахивается */
@@ -315,7 +320,7 @@ body:not(.dev) .dev { display: none !important; }
 .idot.shut { opacity: 0.5; }
 #map { touch-action: none; }
 /* карточка главы при наезде */
-.zcard { pointer-events: auto; width: min(100%, 520px); padding: 10px 14px 12px; border-radius: 18px; display: grid; gap: 10px; border-top: 4px solid var(--cc); background: var(--panel-solid); }
+.zcard { pointer-events: auto; width: min(100%, var(--mcol)); padding: 10px 14px 12px; border-radius: 18px; display: grid; gap: 10px; border-top: 4px solid var(--cc); background: var(--panel-solid); }
 .zc-t { display: grid; gap: 1px; min-width: 0; }
 .zc-t b { font: 400 22px/1.1 var(--f-display); letter-spacing: 0.03em; }
 .zc-t small { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -332,11 +337,12 @@ body:not(.dev) .dev { display: none !important; }
 .zc-new { display: flex; align-items: center; gap: 5px; min-width: 0; font: 600 12px var(--f-body); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .zc-new .i { width: 14px; height: 14px; color: var(--accent-deep); flex: none; }
 .mbottom { position: absolute; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: center; padding: 0 var(--pad-r) var(--pad-b) var(--pad-l); pointer-events: none; }
-.mbottom .btn.go.big.cta { pointer-events: auto; flex: 0 1 460px; justify-content: flex-start; min-height: 78px; border-radius: 20px; gap: 14px; padding: 0 24px; box-shadow: 0 10px 28px rgba(150, 110, 0, 0.32); }
+.mbottom .btn.go.big.cta { pointer-events: auto; flex: 0 1 var(--mcol); justify-content: flex-start; min-height: 78px; border-radius: 20px; gap: 14px; padding: 0 24px; box-shadow: 0 10px 28px rgba(150, 110, 0, 0.32); }
 .mbottom .cta .i { width: 32px; height: 32px; }
 .mbottom .cta .cta-t b { font-size: 26px; }
 .mbottom .cta .cta-t small { font-size: 14px; }
 [data-layout="short"] .zcard { position: absolute; left: var(--pad-l); top: calc(var(--pad-t) + 54px); width: 290px; gap: 8px; padding: 8px 10px 10px; }
+[data-layout="short"] .mtop { max-width: none; } /* название — над карточкой слева */
 [data-layout="short"] .zc-t b { font-size: 18px; }
 [data-layout="short"] .zc-s { padding: 6px 8px; }
 [data-layout="short"] .zc-s b { font-size: 18px; }
@@ -345,7 +351,7 @@ body:not(.dev) .dev { display: none !important; }
 [data-layout="short"] .mbottom .cta .cta-t b { font-size: 21px; }
 [data-layout="short"] .zoomed .mbottom { left: var(--pad-l); right: auto; width: 290px; padding: 0 0 var(--pad-b); }
 [data-layout="short"] .zoomed .mbottom .cta { flex: 1; }
-[data-layout="short"] .navb .disc { width: 56px; height: 56px; }
+[data-layout="short"] .navb:not(.back) .disc { width: 56px; height: 56px; }
 
 /* карточка уровня и ворот главы — снизу на телефоне, по центру на широком окне */
 .sheet-wrap { position: fixed; inset: 0; z-index: 50; display: grid; align-items: end; justify-items: center; background: rgba(23, 33, 44, 0.28); padding: var(--pad-t) var(--pad-r) 0 var(--pad-l); }
@@ -2881,9 +2887,11 @@ function toScreen(p) {
 function mapPlace() {
   for (const e of mapOv.querySelectorAll('[data-anchor]')) { const [cx, cy] = mp.centers[+e.dataset.anchor], p = toScreen({ x: cx, y: cy - MA / 2 - 14 }); e.style.left = p.x + 'px'; e.style.top = p.y + 'px'; }
   for (const e of mapOv.querySelectorAll('[data-lv]')) { const p = toScreen(nodePt(+e.dataset.lv)); e.style.left = p.x + 'px'; e.style.top = p.y + 'px'; }
-  const r = mapSvg.getBoundingClientRect(), m = 46;
+  const r = mapSvg.getBoundingClientRect();
   const back = mapOv.querySelector('[data-nav="back"]');
-  if (back) { back.style.left = (r.left + m) + 'px'; back.style.top = (r.bottom - m - 10) + 'px'; }
+  // левым краем — по колонке с «Играть» (подпись шире кружка, её и равняем); сбоку от карточки — по краю моря
+  if (back) { const bt = $('#mapBottom .cta'), x = Math.max(r.left + 12, bt ? bt.getBoundingClientRect().left : 0);
+    back.style.left = (x + back.offsetWidth / 2) + 'px'; back.style.top = (r.bottom - back.offsetHeight / 2 - 12) + 'px'; }
   const dots = mapOv.querySelector('.idots');
   if (dots) { dots.style.left = (r.right - 22) + 'px'; dots.style.top = (r.top + r.height / 2) + 'px'; }
 }

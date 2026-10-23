@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Порыв — наряды уровня</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Unbounded:wght@500;700&family=Nunito:wght@700;800;900&display=swap">
+<style>
+/* Экран уровня «Два забора» в двух нарядах — те же места и размеры, что в игре на телефоне 390×844.
+   Два состояния: расстановка (забор поставлен и выделен) и реплика смотрителя в журнале. */
+:root {
+  --bg: #dfe7ee; --sky: #f6f8fa; --line: rgba(30, 50, 75, 0.12); --ink: #17212c; --muted: #5a6979; --accent-deep: #b88a00;
+  --f-display: "Rubik Mono One", "Arial Black", system-ui, sans-serif; --f-body: "Golos Text", "Segoe UI", system-ui, sans-serif; --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg) radial-gradient(120% 60% at 50% 0%, var(--sky) 0%, var(--bg) 70%); color: var(--ink); font: 15px/1.5 var(--f-body); }
+.wrap { max-width: 1960px; margin: 0 auto; padding: 28px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 22px; }
+header { display: grid; gap: 8px; max-width: 72ch; }
+.kick { font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+h1 { margin: 0; font: 400 clamp(22px, 4.4vw, 32px)/1.1 var(--f-display); letter-spacing: 0.03em; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); }
+header a { color: var(--ink); font-weight: 600; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.seg button { font: 600 13px var(--f-body); border: 0; background: none; padding: 6px 12px; border-radius: 7px; cursor: pointer; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.groups { display: flex; flex-wrap: wrap; gap: 40px; justify-content: center; align-items: start; }
+.grp { flex: 0 1 auto; width: calc(812px * var(--k) + 20px); }
+.grp { display: grid; gap: 14px; }
+.grp h3 { margin: 0; font: 500 12px var(--f-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+.grp h3::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.grp > p { margin: -6px 0 0; font-size: 14px; color: var(--muted); max-width: 80ch; }
+.row { display: flex; flex-wrap: wrap; gap: 26px 20px; justify-content: center; }
+.v { display: grid; gap: 10px; align-content: start; width: calc(406px * var(--k)); }
+.v h2 { margin: 0; font: 400 14px var(--f-display); letter-spacing: 0.03em; }
+.v p { margin: 0; font-size: 13px; color: var(--muted); }
+.frame { width: calc(390px * var(--k)); height: calc(844px * var(--k)); border-radius: calc(34px * var(--k)); overflow: hidden; position: relative;
+  box-shadow: 0 0 0 calc(8px * var(--k)) #17212c, 0 18px 50px rgba(23, 33, 44, 0.3); margin: calc(8px * var(--k)); }
+.frame > .scr { transform: scale(var(--k)); transform-origin: 0 0; }
+
+/* ================= разметка: одна на оба наряда ================= */
+.scr { position: absolute; left: 0; top: 0; width: 390px; height: 844px; overflow: hidden; background: var(--bgs); color: var(--txt); font-family: var(--f-body); -webkit-tap-highlight-color: transparent; }
+.scr button { font: inherit; color: inherit; cursor: pointer; padding: 0; }
+.scr .i { width: 20px; height: 20px; flex: none; display: block; }
+.board { position: absolute; left: 0; top: 0; width: 390px; height: 844px; }
+.topbar { position: absolute; left: 12px; top: 10px; width: 366px; height: 117px; display: flex; gap: 12px; padding: 9px 13px 10px 9px; }
+.mbtn { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 0; }
+.lvl { flex: 1; min-width: 0; display: grid; align-content: start; }
+.lvl .ch { font: 500 10px var(--f-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--txt2); }
+.lvl b { font: 400 17px/1.2 var(--f-display); letter-spacing: 0.04em; }
+.lvl p { margin: 4px 0 0; font-size: 12px; line-height: 1.3; color: var(--txt2); }
+.wind { width: 116px; flex: none; display: grid; align-content: start; gap: 6px; }
+.wn { display: flex; align-items: baseline; justify-content: flex-end; gap: 4px; }
+.wn .i { width: 22px; height: 22px; align-self: center; transform: rotate(26.6deg); color: var(--txt); }
+.wn b { font: 500 26px/1 var(--f-mono); }
+.wn span { font: 500 11px var(--f-mono); color: var(--txt2); }
+.legend { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px 0; }
+.legend i { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #3b82c4, #49b0b5, #9ccc65, #f4d24a, #f39a48, #e65f5c, #c03f80); }
+.legend span { font: 500 9.5px var(--f-mono); color: var(--txt2); }
+.legend span:nth-of-type(2) { text-align: center; } .legend span:nth-of-type(3) { text-align: right; }
+.undo { position: absolute; left: 253px; top: 143px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; border: 0; }
+.bulb { position: absolute; left: 313px; top: 135px; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; border: 0; }
+.bulb .i { width: 28px; height: 28px; }
+.bcap { position: absolute; left: 307px; top: 198px; width: 71px; display: grid; justify-items: center; line-height: 1.2; padding: 3px 0 4px; font: 700 11px var(--f-body); }
+.bcap small { font: 500 9px var(--f-mono); opacity: 0.75; }
+.ctrl { position: absolute; width: 36px; height: 36px; margin: -18px 0 0 -18px; border-radius: 50%; display: grid; place-items: center; border: 0; }
+.ctrl .i { width: 18px; height: 18px; }
+.journal { position: absolute; left: 0; right: 0; top: 625px; bottom: 0; }
+.talking .journal { top: 456px; }
+.handle { position: absolute; left: 50%; top: 8px; width: 40px; height: 5px; margin-left: -20px; border-radius: 3px; }
+.talk { position: absolute; left: 12px; top: 476px; width: 366px; min-height: 172px; display: none; gap: 12px; grid-template-columns: 52px 1fr; padding: 14px 16px 12px 12px; }
+.talking .talk { display: grid; }
+.talk .ava { width: 52px; height: 52px; }
+.talk b { font-weight: 700; font-size: 15px; } .talk b span { font-weight: 500; font-size: 12px; color: var(--txt2); margin-left: 4px; }
+.talk p { margin: 3px 0 0; font-size: 15px; line-height: 1.4; }
+.talk .skip { grid-column: 2; justify-self: end; font-size: 12px; text-decoration: underline; color: var(--txt2); background: none; border: 0; }
+.inv { position: absolute; left: 12px; top: 656px; display: flex; gap: 8px; }
+.talking .inv { top: 672px; opacity: 0.45; pointer-events: none; }
+.piece { position: relative; width: 87px; height: 84px; display: grid; justify-items: center; align-content: end; gap: 1px; padding-bottom: 8px; border: 0; }
+.piece svg { width: 44px; height: 34px; margin-bottom: 4px; }
+.piece b { font-size: 13px; font-weight: 700; line-height: 1.1; }
+.piece small { font: 500 9.5px var(--f-mono); color: var(--txt2); }
+.piece .cnt { position: absolute; right: 6px; top: 5px; font: 700 11px var(--f-mono); }
+.jhint { position: absolute; left: 12px; right: 12px; top: 748px; font-size: 12px; color: var(--txt2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.talking .jhint { display: none; }
+.go { position: absolute; left: 12px; top: 782px; width: 366px; height: 52px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 0; overflow: hidden; }
+.go b { font: 400 18px var(--f-display); letter-spacing: 0.08em; }
+.go kbd { font: 500 10px var(--f-mono); padding: 1px 5px; border-radius: 4px; border: 1px solid currentColor; opacity: 0.7; }
+.ava { border-radius: 50%; background: #f3d2b3; position: relative; overflow: hidden; flex: none; display: block; }
+.ava::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 40%; background: var(--hat); }
+.ava::after { content: ""; position: absolute; left: 26%; top: 50%; width: 48%; height: 16%;
+  background: radial-gradient(circle at 14% 50%, #2b2b2b 0 14%, transparent 18%), radial-gradient(circle at 86% 50%, #2b2b2b 0 14%, transparent 18%); }
+.scr :is(button, .piece) { transition: transform 0.12s, box-shadow 0.12s, filter 0.12s; }
+/* поле */
+.cell { stroke: var(--gap); stroke-width: var(--gapw); fill-opacity: var(--heat); }
+.slab-t { fill: var(--ground); } .slab-l { fill: var(--sl); } .slab-r { fill: var(--sr); } .slab-s { fill: var(--shadow); }
+.chev { fill: none; stroke: var(--chev); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; animation: chev 1.6s ease-in-out infinite; }
+.streak { fill: none; stroke: var(--streak); stroke-width: 1.6; stroke-linecap: round; stroke-dasharray: 7 30; animation: blow 1.2s linear infinite; }
+.hl { fill: #fffaf0; } .hr { fill: #ecdfc8; } .roof { fill: var(--roof); } .roof2 { fill: var(--roof2); } .win { fill: var(--win); }
+.rock-t { fill: #b8c0c8; } .rock-l { fill: #98a2ac; } .rock-r { fill: #7f8a95; }
+.hay-t { fill: #f2cf6a; } .hay-s { fill: #e0b043; } .hay-l { stroke: #c79630; stroke-width: 1; fill: none; }
+.trunk { stroke: #8a6a48; stroke-width: 3; stroke-linecap: round; } .crown { fill: var(--tree); }
+.wood { fill: #c9955f; } .wood2 { fill: #a87645; } .post { fill: #8a5e35; }
+.sel { fill: var(--sel-fill); stroke: var(--sel); stroke-width: 2.5; stroke-dasharray: 6 4; animation: march 1s linear infinite; }
+
+/* ================= Стекло · Туман ================= */
+[data-skin="glass"] { --txt: #1d3340; --txt2: rgba(29, 51, 64, 0.62);
+  --bgs: radial-gradient(60% 26% at 18% 24%, #fff 0, transparent 70%), radial-gradient(50% 26% at 92% 52%, #e6dcf3 0, transparent 70%),
+    radial-gradient(70% 26% at 40% 78%, #d3efe0 0, transparent 70%), linear-gradient(180deg, #d4e1e4 0%, #c2d6d9 50%, #b2cccc 100%);
+  --pane: linear-gradient(135deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.36)); --edge: rgba(255, 255, 255, 0.9);
+  --pane-sh: inset 0 1px 0 #fff, 0 12px 32px rgba(40, 70, 90, 0.16);
+  --ground: #eef3e6; --sl: #7491a3; --sr: #5e7b8d; --shadow: rgba(40, 70, 90, 0.2); --heat: 0.72; --gap: rgba(255, 255, 255, 0.55); --gapw: 1;
+  --chev: #f2ad12; --streak: rgba(29, 51, 64, 0.5); --roof: #e98b6d; --roof2: #cf7457; --win: #5e7b8d; --tree: #6dba7f;
+  --sel: #fff; --sel-fill: rgba(255, 255, 255, 0.25); }
+[data-skin="glass"] :is(.topbar, .undo, .mbtn, .bcap, .ctrl, .piece, .talk) { background: var(--pane); border: 1px solid var(--edge);
+  -webkit-backdrop-filter: blur(18px) saturate(170%); backdrop-filter: blur(18px) saturate(170%); box-shadow: var(--pane-sh); }
+[data-skin="glass"] .topbar { border-radius: 24px; }
+[data-skin="glass"] .mbtn { border-radius: 15px; background: rgba(255, 255, 255, 0.55); box-shadow: inset 0 1px 0 #fff; }
+[data-skin="glass"] .lvl b { font: 700 18px/1.2 "Unbounded", sans-serif; letter-spacing: 0.01em; }
+[data-skin="glass"] .wn b { font: 700 26px/1 "Unbounded", sans-serif; }
+[data-skin="glass"] .legend i { box-shadow: 0 0 8px rgba(255, 255, 255, 0.9); }
+[data-skin="glass"] .bulb { color: #4a2c00; background: radial-gradient(circle at 32% 24%, #fffbe0 0, #ffe066 24%, #ffbf1f 64%, #e89400 100%);
+  box-shadow: inset 0 -4px 10px rgba(160, 80, 0, 0.3), 0 0 0 3px #fff, 0 0 24px 4px rgba(255, 200, 40, 0.45); }
+[data-skin="glass"] .bcap { border-radius: 10px; }
+[data-skin="glass"] .ctrl { color: var(--txt); }
+[data-skin="glass"] .journal { border-radius: 28px 28px 0 0; border-top: 1px solid #fff; background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.4));
+  -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); box-shadow: 0 -12px 34px rgba(40, 70, 90, 0.14), inset 0 1px 0 #fff; }
+[data-skin="glass"] .handle { background: rgba(29, 51, 64, 0.2); }
+[data-skin="glass"] .piece { border-radius: 18px; }
+[data-skin="glass"] .piece.on { box-shadow: inset 0 1px 0 #fff, 0 0 0 2.5px #f2ad12, 0 0 22px rgba(255, 200, 40, 0.5); }
+[data-skin="glass"] .piece .cnt { color: #b77e00; }
+[data-skin="glass"] .piece.out { opacity: 0.5; }
+[data-skin="glass"] .talk { border-radius: 22px; box-shadow: inset 4px 0 0 #f2ad12, inset 0 1px 0 #fff, 0 12px 30px rgba(40, 70, 90, 0.14); }
+[data-skin="glass"] .talk .ava { box-shadow: 0 0 0 3px #fff, 0 0 0 5px #f2ad12; }
+[data-skin="glass"] .go { border-radius: 20px; color: #4a2c00; border: 1px solid rgba(255, 255, 255, 0.85);
+  background: linear-gradient(135deg, rgba(255, 228, 120, 0.95), rgba(255, 190, 50, 0.92)); box-shadow: inset 0 1px 0 #fff, inset 0 -8px 18px rgba(200, 110, 0, 0.2), 0 12px 30px rgba(220, 150, 20, 0.35); }
+[data-skin="glass"] .go b { font: 700 19px "Unbounded", sans-serif; letter-spacing: 0.06em; text-transform: uppercase; }
+[data-skin="glass"] .go kbd { background: rgba(255, 255, 255, 0.4); border-color: rgba(255, 255, 255, 0.9); opacity: 1; }
+[data-skin="glass"] .go::after { content: ""; position: absolute; top: 0; bottom: 0; width: 60px; left: -80px; transform: skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent); animation: sheen 3.4s ease-in-out infinite; }
+[data-skin="glass"] :is(.go, .undo, .bulb, .ctrl, .mbtn, .piece):active { transform: scale(0.96); }
+[data-skin="glass"] .chev { filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.9)); }
+
+/* ================= Сочная (D1) ================= */
+[data-skin="toy"] { --txt: #1d3b5c; --txt2: #6c86a0; font-family: "Nunito", var(--f-body);
+  --bgs: radial-gradient(28% 6% at 20% 17%, rgba(255, 255, 255, 0.85) 0, transparent 70%), radial-gradient(22% 5% at 80% 31%, rgba(255, 255, 255, 0.7) 0, transparent 70%),
+    linear-gradient(180deg, #8fd8ff 0%, #6cc6fa 50%, #58b6f0 100%);
+  --lip: #c9d8e6; --ground: #a4e277; --sl: #c48a52; --sr: #a06a3a; --shadow: rgba(20, 70, 130, 0.25); --heat: 0.95; --gap: #f4ffe6; --gapw: 2.2;
+  --chev: #ffc800; --streak: rgba(255, 255, 255, 0.9); --roof: #ff6b5a; --roof2: #e2503f; --win: #5cbdf6; --tree: #34b956;
+  --sel: #fff; --sel-fill: rgba(255, 255, 255, 0.3); }
+[data-skin="toy"] :is(.topbar, .undo, .bcap, .ctrl, .piece, .talk) { background: #fff; border: 2.5px solid #dbe7f1; box-shadow: 0 5px 0 var(--lip), 0 8px 16px rgba(20, 60, 100, 0.15); }
+[data-skin="toy"] .topbar { border-radius: 26px; }
+[data-skin="toy"] .mbtn { border-radius: 15px; background: #4aa8ea; color: #fff; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.35), 0 4px 0 #2f86c4; }
+[data-skin="toy"] .lvl .ch { justify-self: start; font: 900 10px "Nunito", sans-serif; letter-spacing: 0.04em; color: #fff; background: #58c33a; padding: 1px 8px 0; border-radius: 999px; box-shadow: 0 2px 0 #3e9a26; margin-bottom: 2px; }
+[data-skin="toy"] .lvl b { font: 900 19px/1.15 "Nunito", sans-serif; letter-spacing: 0; }
+[data-skin="toy"] .lvl p { font-weight: 700; font-size: 12px; line-height: 1.25; }
+[data-skin="toy"] .wn b { font: 900 30px/1 "Nunito", sans-serif; } [data-skin="toy"] .wn span { font: 800 12px "Nunito", sans-serif; }
+[data-skin="toy"] .legend i { height: 10px; border-radius: 5px; box-shadow: 0 0 0 2px #fff, 0 3px 0 2px var(--lip); }
+[data-skin="toy"] .legend span { font: 800 10px "Nunito", sans-serif; margin-top: 3px; }
+[data-skin="toy"] .undo { color: #2f86c4; }
+[data-skin="toy"] .bulb { background: #ffc800; color: #5a3d00; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4), 0 6px 0 #d39b00, 0 10px 16px rgba(20, 60, 100, 0.2); animation: bounce 1.6s ease-in-out infinite; }
+[data-skin="toy"] .bcap { background: #b46cff; color: #fff; border: 0; border-radius: 12px; box-shadow: 0 3px 0 #8a45d6; font: 900 11px "Nunito", sans-serif; }
+[data-skin="toy"] .bcap small { font: 800 9px "Nunito", sans-serif; opacity: 0.85; }
+[data-skin="toy"] .ctrl { color: #2f86c4; border-width: 2px; box-shadow: 0 3px 0 var(--lip); }
+[data-skin="toy"] .journal { background: #fff; border-radius: 30px 30px 0 0; box-shadow: 0 -4px 0 #dbe7f1, 0 -14px 30px rgba(20, 60, 100, 0.18); }
+[data-skin="toy"] .handle { background: #dbe7f1; }
+[data-skin="toy"] .piece { border-radius: 18px; }
+[data-skin="toy"] .piece::before { content: ""; position: absolute; left: 8px; right: 8px; top: 8px; height: 42px; border-radius: 12px; background: #fff6cc; z-index: -1; }
+[data-skin="toy"] .piece { isolation: isolate; }
+[data-skin="toy"] .piece b { font-weight: 900; } [data-skin="toy"] .piece small { font: 800 10px "Nunito", sans-serif; }
+[data-skin="toy"] .piece .cnt { right: -7px; top: -7px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: #ff6b5a; color: #fff; font: 900 12px "Nunito", sans-serif; box-shadow: 0 0 0 2.5px #fff, 0 3px 0 2.5px var(--lip); }
+[data-skin="toy"] .piece.on { border-color: #58c33a; box-shadow: 0 5px 0 #3e9a26, 0 10px 18px rgba(60, 150, 40, 0.3); transform: translateY(-4px); }
+[data-skin="toy"] .piece.on::before { background: #e3f6d8; }
+[data-skin="toy"] .piece.out { filter: grayscale(1); opacity: 0.55; }
+[data-skin="toy"] .piece.out .cnt { background: #b5c0cc; }
+[data-skin="toy"] .jhint { font-weight: 700; }
+[data-skin="toy"] .talk { border-radius: 24px; grid-template-columns: 56px 1fr; }
+[data-skin="toy"] .talk::after { content: ""; position: absolute; left: 30px; bottom: -13px; width: 22px; height: 14px; background: #fff; clip-path: polygon(0 0, 100% 0, 20% 100%); }
+[data-skin="toy"] .talk .ava { width: 56px; height: 56px; box-shadow: 0 0 0 3px #fff, 0 0 0 6px #ffc800, 0 6px 0 3px #d39b00; }
+[data-skin="toy"] .talk b { font-weight: 900; font-size: 16px; } [data-skin="toy"] .talk b span { font-weight: 700; }
+[data-skin="toy"] .talk p { font-weight: 700; color: #1d3b5c; }
+[data-skin="toy"] .go { border-radius: 20px; background: #ffc800; color: #5a3d00; top: 778px; box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.4), 0 6px 0 #d39b00, 0 12px 18px rgba(20, 60, 100, 0.2); }
+[data-skin="toy"] .go b { font: 900 26px "Nunito", sans-serif; text-transform: uppercase; letter-spacing: 0.02em; }
+[data-skin="toy"] .go kbd { font: 800 10px "Nunito", sans-serif; background: rgba(255, 255, 255, 0.5); border: 0; opacity: 1; padding: 2px 7px; border-radius: 6px; box-shadow: 0 2px 0 #d39b00; }
+[data-skin="toy"] .go:active { transform: translateY(5px); box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.4), 0 1px 0 #d39b00; }
+[data-skin="toy"] :is(.undo, .ctrl, .piece):active { transform: translateY(4px); box-shadow: 0 1px 0 var(--lip); }
+[data-skin="toy"] .bulb:active { transform: translateY(5px); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4), 0 1px 0 #d39b00; }
+[data-skin="toy"] .mbtn:active { transform: translateY(3px); box-shadow: 0 1px 0 #2f86c4; }
+[data-skin="toy"] .chev { stroke: #d39b00; stroke-width: 6; }
+[data-skin="toy"] .chev.f { stroke: #ffc800; stroke-width: 3; }
+[data-skin="toy"] .streak { stroke-width: 2.4; }
+[data-skin="toy"] .crown { stroke: #23923f; stroke-width: 1.5; }
+
+@keyframes sheen { 0%, 55% { left: -80px; } 100% { left: 110%; } }
+@keyframes bounce { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
+@keyframes chev { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@keyframes blow { from { stroke-dashoffset: 37; } to { stroke-dashoffset: 0; } }
+@keyframes march { to { stroke-dashoffset: -20; } }
+@media (prefers-reduced-motion: reduce) { .scr *, .scr *::after { animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kick">Порыв · прототип · наряды уровня</div>
+    <h1>Экран уровня: стекло и сочная</h1>
+    <p>Уровень «Два забора» на телефоне: всё на тех же местах и тех же размеров, что в игре. Стекло — в цвете «Туман». В каждом наряде два состояния: расстановка (один забор уже стоит и выделен) и реплика смотрителя в журнале. Наряды карты — <a href="map-skins.html">здесь</a>.</p>
+  </header>
+  <div class="bar"><div class="seg" id="size" role="group" aria-label="Размер"><button type="button" data-k="fit" aria-pressed="true">Вписать</button><button type="button" data-k="1" aria-pressed="false">1:1</button></div></div>
+  <div class="groups" id="groups"></div>
+</div>
+
+<script>
+const GROUPS = [
+  { skin: 'glass', t: 'Стекло · Туман', d: 'Журнал и полоса сверху — молочное стекло: сквозь журнал размыто видно море. Подсказка — светящаяся жёлтая жемчужина, по «Ветер!» пробегает блик. Выбранная фигура в журнале светится.' },
+  { skin: 'toy', t: 'Сочная', d: 'Всё нажимается «вглубь»: у кнопок и карточек снизу губа. Клетки поля — отдельными плитками, ветер — белые завитки. У каждой фигуры счётчик-монетка, выбранная карточка приподнята и зелёная; кончились — серая. Реплика — облачко с хвостиком.' },
+];
+const STATES = [{ id: 'place', t: 'Расстановка' }, { id: 'talk', t: 'Реплика смотрителя' }];
+
+const I = {
+  menu: '<path d="M5 7h14M5 12h14M5 17h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+  undo: '<path d="M9 7L5 11l4 4M5 11h9a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  bulb: '<path d="M9 17h6M10 20.5h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>',
+  arrow: '<path d="M4 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  rot: '<path d="M19 12a7 7 0 1 1-2.1-5M19 4v4h-4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  move: '<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+};
+const icon = k => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${I[k]}</svg>`;
+const PIECE = {
+  fence: '<g transform="rotate(-24 22 17)"><rect class="post" x="7" y="9" width="4" height="15" rx="1"/><rect class="post" x="33" y="9" width="4" height="15" rx="1"/><rect class="wood" x="4" y="11" width="36" height="4.5" rx="1.5"/><rect class="wood2" x="4" y="17.5" width="36" height="4.5" rx="1.5"/></g>',
+  wattle: '<g><rect class="post" x="8" y="6" width="3.5" height="22" rx="1"/><rect class="post" x="20.3" y="6" width="3.5" height="22" rx="1"/><rect class="post" x="32.6" y="6" width="3.5" height="22" rx="1"/><path d="M4 11q8 5 16 0t20 0M4 17q8 5 16 0t20 0M4 23q8 5 16 0t20 0" fill="none" stroke="#b98a5a" stroke-width="3" stroke-linecap="round"/></g>',
+  tree: '<line class="trunk" x1="22" y1="31" x2="22" y2="20"/><circle class="crown" cx="22" cy="13" r="10"/>',
+};
+
+// ---------- поле 8×8: ветер дует вдоль +u (от жёлтых стрелок) ----------
+const N = 8, CX = 195, CY = 395, a = 21, DEPTH = 16;
+const P = (u, v) => ({ x: CX + (u - v) * a, y: CY + (u + v - N) * a / 2 });
+const pp = ps => ps.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+const up = (p, h) => ({ x: p.x, y: p.y - h });
+// что стоит: хаты (их бережём), камни-сараи, стога, дерево; забор поставлен перед первой хатой
+const HOUSES = [[5, 2], [4, 6]], ROCKS = [[0, 6]], HAYS = [[6, 4], [7, 1]], TREES = [[1, 0]], FENCE = { u: 4.12, v0: 1.85, v1: 3.15 };
+const STOPS = [[0, '#3b82c4'], [7, '#49b0b5'], [12, '#9ccc65'], [16, '#f4d24a'], [20, '#f39a48'], [24, '#e65f5c'], [28, '#c03f80']];
+const hex = h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16));
+function heat(w) {
+  for (let k = 1; k < STOPS.length; k++) if (w <= STOPS[k][0]) {
+    const [w0, c0] = STOPS[k - 1], [w1, c1] = STOPS[k], t = (w - w0) / (w1 - w0), A = hex(c0), B = hex(c1);
+    return `rgb(${A.map((x, i) => Math.round(x + (B[i] - x) * t)).join(',')})`;
+  }
+  return STOPS[STOPS.length - 1][1];
+}
+function wind(i, j) {
+  const obs = [...HOUSES, ...ROCKS, ...HAYS, ...TREES].map(([u, v]) => ({ u, v, k: 0.7 })).concat([{ u: 3, v: 2, k: 0.95, wide: 1 }]);
+  let s = 0;
+  for (const o of obs) {
+    if (i <= o.u) continue;
+    const dj = Math.abs(j - o.v), reach = Math.exp(-(i - o.u - 1) / 2.6);
+    s = Math.max(s, dj === 0 ? o.k * reach : dj === 1 ? (o.wide ? 0.55 : 0.3) * reach : 0);
+  }
+  return Math.max(2, 23 * (1 - s) + Math.sin(i * 1.7 + j * 2.3) * 1.6 + (j === 0 || j === 7 ? 2 : 0));
+}
+function box(u, v, s, h, cls) {
+  const A = P(u, v), B = P(u + s, v), C = P(u + s, v + s), D = P(u, v + s);
+  return `<polygon class="${cls[2]}" points="${pp([B, C, up(C, h), up(B, h)])}"/><polygon class="${cls[1]}" points="${pp([D, C, up(C, h), up(D, h)])}"/>
+    <polygon class="${cls[0]}" points="${pp([up(A, h), up(B, h), up(C, h), up(D, h)])}"/>`;
+}
+function house(i, j) {
+  const u = i + 0.2, v = j + 0.2, s = 0.6, h = 14, A = P(u, v), B = P(u + s, v), C = P(u + s, v + s), D = P(u, v + s), L = (p, q, k) => ({ x: p.x + (q.x - p.x) * k, y: p.y + (q.y - p.y) * k });
+  const top = up(L(A, C, 0.5), h + 12), w1 = L(D, C, 0.35), w2 = L(D, C, 0.65);
+  return `<polygon class="hr" points="${pp([B, C, up(C, h), up(B, h)])}"/><polygon class="hl" points="${pp([D, C, up(C, h), up(D, h)])}"/>
+    <polygon class="win" points="${pp([up(w1, h * 0.3), up(w2, h * 0.3), up(w2, h * 0.7), up(w1, h * 0.7)])}"/>
+    <polygon class="roof" points="${pp([up(A, h), up(B, h), top])}"/><polygon class="roof" points="${pp([up(B, h), up(C, h), top])}"/><polygon class="roof2" points="${pp([up(D, h), up(C, h), top])}"/><polygon class="roof2" points="${pp([up(A, h), up(D, h), top])}"/>`;
+}
+function hay(i, j) { const c = P(i + 0.5, j + 0.5); return `<ellipse class="hay-s" cx="${c.x}" cy="${c.y}" rx="11" ry="5.5"/><rect class="hay-s" x="${c.x - 11}" y="${c.y - 12}" width="22" height="12"/>
+  <ellipse class="hay-t" cx="${c.x}" cy="${c.y - 12}" rx="11" ry="5.5"/><path class="hay-l" d="M${c.x - 11} ${c.y - 6}q11 6 22 0"/><ellipse class="hay-t" cx="${c.x}" cy="${c.y - 17}" rx="6" ry="3"/>`; }
+function tree(i, j) { const c = P(i + 0.5, j + 0.5); return `<line class="trunk" x1="${c.x}" y1="${c.y}" x2="${c.x}" y2="${c.y - 12}"/><circle class="crown" cx="${c.x}" cy="${c.y - 20}" r="10"/>`; }
+function fence() {
+  const { u, v0, v1 } = FENCE, h = 11, t = 0.12, A = P(u, v0), B = P(u, v1), A2 = P(u + t, v0), B2 = P(u + t, v1);
+  let g = `<polygon class="wood2" points="${pp([A2, B2, up(B2, h), up(A2, h)])}"/><polygon class="wood" points="${pp([up(A, h), up(B, h), up(B2, h), up(A2, h)])}"/>`;
+  g += `<polygon class="wood" points="${pp([A, B, up(B, h), up(A, h)])}"/>`;
+  for (const k of [0, 0.5, 1]) { const p = P(u, v0 + (v1 - v0) * k); g += `<rect class="post" x="${p.x - 2}" y="${p.y - h - 4}" width="4" height="${h + 6}" rx="1"/>`; }
+  return g;
+}
+function board(skin) {
+  let s = `<svg class="board" viewBox="0 0 390 844" aria-hidden="true">`;
+  const T = [P(0, 0), P(N, 0), P(N, N), P(0, N)], dn = p => ({ x: p.x, y: p.y + DEPTH });
+  s += `<ellipse class="slab-s" cx="${CX}" cy="${CY + DEPTH + 14}" rx="${N * a * 1.1}" ry="${N * a * 0.5}"/>`;
+  s += `<polygon class="slab-r" points="${pp([T[1], T[2], dn(T[2]), dn(T[1])])}"/><polygon class="slab-l" points="${pp([T[3], T[2], dn(T[2]), dn(T[3])])}"/><polygon class="slab-t" points="${pp(T)}"/>`;
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) s += `<polygon class="cell" fill="${heat(wind(i, j))}" points="${pp([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)])}"/>`;
+  // выделение поставленного забора
+  s += `<polygon class="sel" points="${pp([P(3.9, 1.7), P(4.5, 1.7), P(4.5, 3.3), P(3.9, 3.3)])}"/>`;
+  // струи ветра там, где дует
+  let n = 0;
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) if (wind(i, j) > 15 && (i * 3 + j * 5) % 4 === 0) {
+    const A = P(i + 0.1, j + 0.5), B = P(i + 0.95, j + 0.5);
+    s += `<path class="streak" style="animation-delay:${-(n++ * 0.37) % 1.2}s" d="M${A.x.toFixed(1)} ${A.y.toFixed(1)} Q${((A.x + B.x) / 2).toFixed(1)} ${((A.y + B.y) / 2 - (skin === 'toy' ? 4 : 0)).toFixed(1)} ${B.x.toFixed(1)} ${B.y.toFixed(1)}"/>`;
+  }
+  // жёлтые стрелки у края, откуда дует
+  for (let j = 0; j < N; j++) {
+    const c = P(-0.55, j + 0.5), d = `M${c.x - 4} ${c.y - 6}l6 6-6 6`, tr = `transform="rotate(26.6 ${c.x} ${c.y})" style="animation-delay:${j * 0.12}s"`;
+    s += `<path class="chev" d="${d}" ${tr}/>` + (skin === 'toy' ? `<path class="chev f" d="${d}" ${tr}/>` : '');
+  }
+  // предметы — от дальних к ближним, чтобы ближние перекрывали
+  const items = [...TREES.map(p => ['t', ...p]), ...ROCKS.map(p => ['r', ...p]), ...HAYS.map(p => ['h', ...p]), ...HOUSES.map(p => ['H', ...p]), ['f', 4, 2]]
+    .sort((x, y) => (x[1] + x[2]) - (y[1] + y[2]));
+  for (const [k, i, j] of items) s += k === 't' ? tree(i, j) : k === 'r' ? box(i + 0.15, j + 0.15, 0.7, 16, ['rock-t', 'rock-l', 'rock-r']) : k === 'h' ? hay(i, j) : k === 'H' ? house(i, j) : fence();
+  return s + '</svg>';
+}
+
+function screen(skin, state) {
+  // кнопки — по концам забора, чтобы не закрывать его
+  const rot = up(P(4.1, 1.15), 22), mov = up(P(4.1, 3.85), 14);
+  return `<div class="scr ${state === 'talk' ? 'talking' : ''}" data-skin="${skin}">
+    ${board(skin)}
+    ${state === 'place' ? `<button type="button" class="ctrl" style="left:${rot.x}px;top:${rot.y}px" aria-label="Повернуть">${icon('rot')}</button>
+      <button type="button" class="ctrl" style="left:${mov.x}px;top:${mov.y}px" aria-label="Перенести">${icon('move')}</button>` : ''}
+    <div class="topbar">
+      <button type="button" class="mbtn" aria-label="Меню">${icon('menu')}</button>
+      <div class="lvl"><span class="ch">Деревня · 5 из 10</span><b>Два забора</b><p>Две хаты далеко друг от друга — каждой свой забор. Ставь поперёк ветра перед хатой.</p></div>
+      <div class="wind"><div class="wn">${icon('arrow')}<b>22</b><span>м/с</span></div><div class="legend"><i></i><span>0</span><span>14</span><span>28 м/с</span></div></div>
+    </div>
+    <button type="button" class="undo" aria-label="Отменить">${icon('undo')}</button>
+    <button type="button" class="bulb" aria-label="Подсказка">${icon('bulb')}</button>
+    <div class="bcap">Подсказка<small>▶ реклама</small></div>
+    <div class="journal"><span class="handle"></span></div>
+    <div class="talk"><span class="ava" style="--hat:#e9b949"></span>
+      <div><b>Петрович<span>смотритель метеостанции</span></b><p>Одна хата укрыта. Вторая стоит на самом ветру — видишь красное? Поставь ей свой забор.</p></div>
+      <button type="button" class="skip">дальше</button></div>
+    <div class="inv">
+      <button type="button" class="piece on"><span class="cnt">×1</span><svg viewBox="0 0 44 34">${PIECE.fence}</svg><b>Забор</b><small>до 22 м/с</small></button>
+      <button type="button" class="piece"><span class="cnt">×1</span><svg viewBox="0 0 44 34">${PIECE.wattle}</svg><b>Плетень</b><small>до 18 м/с</small></button>
+      <button type="button" class="piece out"><span class="cnt">×0</span><svg viewBox="0 0 44 34">${PIECE.tree}</svg><b>Дерево</b><small>до 26 м/с</small></button>
+    </div>
+    <div class="jhint">Тяни фигуру на поле. Провести по полю — повернуть остров.</div>
+    <button type="button" class="go"><b>Ветер!</b><kbd>Пробел</kbd></button>
+  </div>`;
+}
+
+const groups = document.getElementById('groups');
+groups.innerHTML = GROUPS.map(G => `<section class="grp"><h3>${G.t}</h3><p>${G.d}</p><div class="row">${STATES.map(S =>
+  `<section class="v"><h2>${S.t}</h2><div class="frame">${screen(G.skin, S.id)}</div></section>`).join('')}</div></section>`).join('');
+
+let mode = 'fit';
+function fit() {
+  const W = groups.clientWidth - 2, gap = 20;
+  let k = 1;
+  if (mode === 'fit') {
+    // оба наряда в ряд (4 телефона), если влезают не мельче 0.62; иначе по два
+    const k4 = (W - 2 * gap - 40) / 4 / 406, k2 = (W - gap) / 2 / 406;
+    k = Math.min(0.9, k4 >= 0.62 ? k4 : k2 >= 0.5 ? k2 : W / 406);
+  } else k = Math.min(1, W / 406);
+  document.documentElement.style.setProperty('--k', k.toFixed(3));
+}
+document.querySelectorAll('#size button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#size button').forEach(x => x.setAttribute('aria-pressed', x === b)); mode = b.dataset.k; fit();
+}));
+new ResizeObserver(fit).observe(groups); fit();
+</script>
+</body>
+</html>

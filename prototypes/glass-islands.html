@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Порыв — стекло по островам</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Макет «стекло по островам»: меню (карта) и экран уровня на телефоне 390×844.
+   Фон — палитра острова, при листании карты смешивается между соседями. Стекло — без размытия (дёшево),
+   всё, что нажимается, — непрозрачные цветные кнопки с объёмом. */
+:root {
+  --bg: #dfe7ee; --sky: #f6f8fa; --line: rgba(30, 50, 75, 0.12); --ink: #17212c; --muted: #5a6979;
+  --f-display: "Rubik Mono One", "Arial Black", system-ui, sans-serif; --f-body: "Golos Text", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace; --f-glass: "Unbounded", system-ui, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg) radial-gradient(120% 60% at 50% 0%, var(--sky) 0%, var(--bg) 70%); color: var(--ink); font: 15px/1.5 var(--f-body); }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 28px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 20px; }
+header { display: grid; gap: 8px; max-width: 76ch; }
+.kick { font: 500 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+h1 { margin: 0; font: 400 clamp(22px, 4.4vw, 32px)/1.1 var(--f-display); letter-spacing: 0.03em; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); }
+header a { color: var(--ink); font-weight: 600; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.seg button { font: 600 13px var(--f-body); border: 0; background: none; padding: 6px 12px; border-radius: 7px; cursor: pointer; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.hint { font-size: 13px; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: 26px 28px; justify-content: center; }
+.v { display: grid; gap: 10px; align-content: start; width: calc(406px * var(--k)); }
+.v h2 { margin: 0; font: 400 14px var(--f-display); letter-spacing: 0.03em; }
+.frame { width: calc(390px * var(--k)); height: calc(844px * var(--k)); border-radius: calc(34px * var(--k)); overflow: hidden; position: relative;
+  box-shadow: 0 0 0 calc(8px * var(--k)) #17212c, 0 18px 50px rgba(23, 33, 44, 0.3); margin: calc(8px * var(--k)); }
+.frame > .scr { transform: scale(var(--k)); transform-origin: 0 0; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.note { background: rgba(255, 255, 255, 0.6); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.note h3 { margin: 0 0 6px; font: 500 11px var(--f-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.note ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+
+/* ================= экран: фон острова ================= */
+/* --g1..--g3, --b1, --b2, --cc выставляет JS: смесь палитр двух соседних островов по положению камеры */
+.stage { --cc: #4f8a4b; --shade: rgba(30, 50, 75, 0.14); --txt: #1d2f3a; --txt2: rgba(29, 47, 58, 0.64); }
+.scr { position: absolute; left: 0; top: 0; width: 390px; height: 844px; overflow: hidden; color: var(--txt); font-family: var(--f-body); -webkit-tap-highlight-color: transparent; user-select: none;
+  background: radial-gradient(60% 24% at 16% 30%, var(--b1) 0, transparent 70%), radial-gradient(52% 24% at 94% 62%, var(--b2) 0, transparent 70%),
+    linear-gradient(180deg, var(--g1) 0%, var(--g2) 50%, var(--g3) 100%); }
+:where(.scr button) { font: inherit; color: inherit; cursor: pointer; padding: 0; border: 0; } /* без веса: отступы и рамки кнопок задают их классы */
+.scr .i { width: 20px; height: 20px; flex: none; display: block; }
+
+/* ================= стекло: без размытия — полупрозрачный белый, светлая кромка, блик ================= */
+.glass { background: linear-gradient(160deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.56) 42%, rgba(255, 255, 255, 0.46) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.95); box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 rgba(255, 255, 255, 0.35), 0 10px 26px var(--shade); }
+.blur .glass { -webkit-backdrop-filter: blur(14px) saturate(160%); backdrop-filter: blur(14px) saturate(160%); }
+
+/* ================= кнопки: плоская пастель со светлой кромкой — по образцу «Играть», без объёма ================= */
+/* цвет закреплён за назначением и от острова не зависит: меняется только фон */
+.cb { position: relative; isolation: isolate; color: var(--pt); background: linear-gradient(135deg, var(--p1), var(--p2));
+  border: 1.5px solid rgba(255, 255, 255, 0.9); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 8px 20px var(--ps); transition: transform 0.12s, filter 0.12s; }
+.cb:active { transform: scale(0.96); filter: brightness(0.98); }
+/* белый — уровни; серый — второстепенные кнопки: «Все острова», меню, «Отменить», песочница */
+.cb.white { --p1: #ffffff; --p2: #f4f6f9; --pt: #1d2f3a; --ps: rgba(30, 50, 75, 0.16); }
+.cb.grey { --p1: #e2e6ec; --p2: #c9d0da; --pt: #2f3a4a; --ps: rgba(40, 60, 90, 0.2); }
+.cb.sky { --p1: #e2f1ff; --p2: #c4e0f8; --pt: #22598a; --ps: rgba(60, 120, 180, 0.2); }
+.cb.mint { --p1: #dcf6e4; --p2: #bde9cb; --pt: #1d6b3c; --ps: rgba(60, 160, 100, 0.2); }
+.cb.rose { --p1: #ffe3ef; --p2: #fbc8dd; --pt: #8a2f5a; --ps: rgba(200, 80, 130, 0.2); }
+.cb.slate { --p1: #e6eaf1; --p2: #cfd6e2; --pt: #3a4659; --ps: rgba(40, 60, 90, 0.2); }
+/* «Играть» — как в «Тумане»: тёплый жёлтый, белая кромка, мягкое свечение */
+.cb.sun { color: #4a2c00; background: linear-gradient(135deg, rgba(255, 228, 120, 0.96), rgba(255, 190, 50, 0.92)); border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: inset 0 1px 0 #fff, inset 0 -8px 20px rgba(200, 110, 0, 0.16), 0 14px 34px rgba(220, 150, 20, 0.3); }
+.node.cb.sun, .bulb.cb.sun { box-shadow: inset 0 1px 0 #fff, inset 0 -6px 14px rgba(200, 110, 0, 0.16), 0 8px 22px rgba(220, 150, 20, 0.34); }
+
+/* ================= меню: карта островов ================= */
+.world { position: absolute; left: 0; top: 0; width: 390px; height: 844px; touch-action: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent calc(var(--mt) - 4px), #000 calc(var(--mt) + 32px), #000 calc(var(--mb) - 32px), transparent var(--mb));
+  mask-image: linear-gradient(180deg, transparent calc(var(--mt) - 4px), #000 calc(var(--mt) + 32px), #000 calc(var(--mb) - 32px), transparent var(--mb)); }
+.wave { stroke: rgba(255, 255, 255, 0.45); }
+.ov { position: absolute; inset: 0; pointer-events: none; }
+.ov > * { pointer-events: auto; }
+.node { --d: 48px; position: absolute; width: var(--d); height: var(--d); margin: calc(var(--d) / -2) 0 0 calc(var(--d) / -2); border-radius: 50%; display: grid; place-items: center; font: 600 17px var(--f-glass); }
+.node.current { --d: 62px; font-size: 22px; }
+.node.current::after { content: ""; position: absolute; inset: -12px; border-radius: 50%; border: 2.5px solid #ffcf3a; animation: ring 1.9s ease-out infinite; z-index: -2; }
+.node.locked { color: rgba(29, 47, 58, 0.4); background: linear-gradient(160deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.38)); border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 1px 0 #fff, 0 6px 14px var(--shade); }
+.node.locked .i { width: 17px; height: 17px; }
+.node .srow { position: absolute; left: 50%; bottom: -13px; transform: translateX(-50%); display: flex; padding: 1px 4px; border-radius: 999px; }
+.node .srow .i { width: 12px; height: 12px; }
+.node .who { position: absolute; left: -12px; top: -12px; }
+.node .bdg { position: absolute; right: -6px; top: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; }
+.node .bdg .i { width: 13px; height: 13px; }
+.node, .plab { transition: opacity 0.2s; }
+.plab { position: absolute; transform: translate(-50%, -100%); display: flex; align-items: center; gap: 9px; padding: 7px 14px 7px 7px; border-radius: 16px; white-space: nowrap; text-align: left; }
+.plab .num { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font: 700 15px var(--f-glass); background: rgba(255, 255, 255, 0.6); }
+.plab .t { display: grid; line-height: 1.15; }
+.plab b { font: 700 15px var(--f-glass); }
+.plab small { font: 500 11.5px var(--f-mono); opacity: 0.85; display: flex; gap: 3px; align-items: center; }
+.plab small .i { width: 12px; height: 12px; }
+.plab.shut { color: var(--txt); }
+.plab.shut .num { background: rgba(29, 47, 58, 0.1); }
+.star-on { color: #ffc21a; } .star-off { color: rgba(29, 47, 58, 0.2); }
+.idots { position: absolute; left: 368px; top: 497px; transform: translate(-50%, -50%); display: grid; gap: 10px; transition: opacity 0.2s; }
+.idot { width: 14px; height: 14px; border-radius: 50%; }
+.idot.on { transform: scale(1.4); }
+.idot.on:active { transform: scale(1.3); }
+.top { position: absolute; left: 12px; right: 12px; top: 10px; height: 44px; display: flex; align-items: center; gap: 8px; padding: 4px 14px 0; }
+.brand { display: grid; line-height: 1.1; margin-right: auto; min-width: 0; }
+.brand b { font: 700 19px var(--f-glass); }
+.brand span { font: 500 10px var(--f-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--txt2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip { height: 40px; display: flex; align-items: center; gap: 5px; padding: 0 13px 0 11px; border-radius: 999px; }
+.chip b { font: 700 15px var(--f-glass); } .chip span { font: 500 11px var(--f-mono); opacity: 0.85; }
+.chip { cursor: default; }
+.chip .i { width: 18px; height: 18px; color: #f0a800; }
+.rbtn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
+.zcard { position: absolute; left: 12px; right: 12px; top: 62px; padding: 11px 14px 12px; border-radius: 26px; display: grid; gap: 10px; transition: opacity 0.2s; }
+.zc-t { display: grid; gap: 1px; }
+.zc-t .ch { font: 500 10px var(--f-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--txt2); display: flex; align-items: center; gap: 6px; }
+.zc-t .ch i { width: 9px; height: 9px; border-radius: 50%; background: var(--cc); box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9); }
+.zc-t b { font: 700 23px/1.15 var(--f-glass); }
+.zc-t small { font-size: 13px; color: var(--txt2); }
+.zc-stats { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
+.zc-s { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 5px; row-gap: 6px; padding: 8px 10px; border-radius: 16px; background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(255, 255, 255, 0.85); }
+.zc-s b { font: 700 21px/1 var(--f-glass); } .zc-s span { font-size: 12px; color: var(--txt2); }
+.zc-s .i { width: 18px; height: 18px; align-self: center; }
+.meter { flex: 1 0 100%; height: 6px; border-radius: 3px; background: rgba(29, 47, 58, 0.1); overflow: hidden; }
+.meter i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffd65a, #f0a81c); }
+.zc-foot { display: flex; align-items: center; gap: 10px; min-width: 0; font: 600 12px var(--f-body); color: var(--txt2); }
+.zc-foot .folk { display: flex; flex: none; } .zc-foot .ava { margin-left: -5px; box-shadow: 0 0 0 2px #fff; } .zc-foot .ava:first-child { margin-left: 0; }
+.zc-foot > span:last-child { display: flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zc-foot .i { width: 14px; height: 14px; color: #e5a000; }
+.zc-lock { color: var(--txt); }
+.ava { width: 26px; height: 26px; border-radius: 50%; background: #f3d2b3; position: relative; overflow: hidden; flex: none; display: block; }
+.ava::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 40%; background: var(--hat); }
+.ava::after { content: ""; position: absolute; left: 26%; top: 52%; width: 48%; height: 15%;
+  background: radial-gradient(circle at 14% 50%, #2b2b2b 0 16%, transparent 20%), radial-gradient(circle at 86% 50%, #2b2b2b 0 16%, transparent 20%); }
+.back { position: absolute; left: 12px; top: 688px; height: 48px; max-width: 220px; white-space: nowrap; display: flex; align-items: center; gap: 8px; padding: 0 18px 0 8px; border-radius: 999px; font: 600 14px var(--f-body); transition: opacity 0.2s, transform 0.12s; }
+.back .disc { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.6); }
+.cta { position: absolute; left: 12px; right: 12px; top: 754px; height: 78px; display: flex; align-items: center; gap: 14px; padding: 0 24px; border-radius: 26px; text-align: left; overflow: hidden; }
+.cta > .i { width: 30px; height: 30px; }
+.cta-t { display: grid; line-height: 1.15; }
+.cta-t b { font: 700 25px var(--f-glass); text-transform: uppercase; letter-spacing: 0.02em; }
+.cta-t { min-width: 0; }
+.cta-t small { font: 600 14px var(--f-body); opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cta::after, .go::after { content: ""; position: absolute; top: 0; bottom: 0; width: 60px; left: -80px; transform: skewX(-20deg); z-index: -1;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent); animation: sheen 3.6s ease-in-out infinite; }
+.bolt { animation: flash 5s infinite; }
+.spin-m { animation: spin 6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ================= экран уровня ================= */
+.board { position: absolute; left: 0; top: 0; width: 390px; height: 844px; }
+.topbar { position: absolute; left: 12px; top: 10px; width: 366px; height: 117px; display: flex; gap: 12px; padding: 9px 13px 10px 9px; border-radius: 24px; }
+.mbtn { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 15px; }
+.lvl { flex: 1; min-width: 0; display: grid; align-content: start; }
+.lvl .ch { font: 500 10px var(--f-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--txt2); }
+.lvl b { font: 700 16px/1.2 var(--f-glass); }
+.lvl p { margin: 3px 0 0; font-size: 12px; line-height: 1.3; color: var(--txt2); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.wind { width: 116px; flex: none; display: grid; align-content: start; gap: 6px; }
+.wn { display: flex; align-items: baseline; justify-content: flex-end; gap: 4px; }
+.wn .i { width: 22px; height: 22px; align-self: center; transform: rotate(26.6deg); }
+.wn b { font: 700 26px/1 var(--f-glass); } .wn span { font: 500 11px var(--f-mono); color: var(--txt2); }
+.legend { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px 0; }
+.legend i { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #3b82c4, #49b0b5, #9ccc65, #f4d24a, #f39a48, #e65f5c, #c03f80); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8); }
+.legend span { font: 500 9.5px var(--f-mono); color: var(--txt2); }
+.legend span:nth-of-type(2) { text-align: center; } .legend span:nth-of-type(3) { text-align: right; }
+.undo { position: absolute; left: 253px; top: 143px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; }
+.bulb { position: absolute; left: 313px; top: 135px; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; }
+.bulb .i { width: 28px; height: 28px; }
+.bcap { position: absolute; left: 307px; top: 198px; width: 71px; display: grid; justify-items: center; line-height: 1.2; padding: 3px 0 4px; font: 700 11px var(--f-body); border-radius: 10px; }
+.bcap small { font: 500 9px var(--f-mono); opacity: 0.75; }
+.ctrl { position: absolute; width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%; display: grid; place-items: center; }
+.ctrl .i { width: 19px; height: 19px; }
+.journal { position: absolute; left: 0; right: 0; top: 625px; bottom: 0; border-radius: 28px 28px 0 0; border-bottom: 0; }
+.handle { position: absolute; left: 50%; top: 8px; width: 40px; height: 5px; margin-left: -20px; border-radius: 3px; background: rgba(29, 47, 58, 0.2); }
+.inv { position: absolute; left: 12px; top: 656px; display: flex; gap: 8px; }
+.piece { position: relative; width: 87px; height: 84px; display: grid; justify-items: center; align-content: end; gap: 1px; padding-bottom: 8px; border-radius: 20px; }
+.piece > .i { width: 34px; height: 34px; margin-bottom: 4px; }
+.piece b, .piece small { max-width: 78px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.piece b { font-size: 13px; font-weight: 700; line-height: 1.1; }
+.piece small { font: 500 9.5px var(--f-mono); opacity: 0.85; }
+.piece.card { background: #fff; border: 1px solid rgba(30, 50, 75, 0.06); box-shadow: 0 6px 16px rgba(30, 50, 75, 0.12); transition: transform 0.12s; }
+.piece.card:active { transform: scale(0.96); }
+.piece .cnt { position: absolute; right: 6px; top: 6px; min-width: 24px; height: 20px; padding: 0 5px; border-radius: 10px; display: grid; place-items: center; font: 700 11px var(--f-glass); background: #fff1c4; color: #6b4d00; }
+.piece.on { transform: translateY(-5px); box-shadow: 0 0 0 2.5px #ffc23a, 0 10px 24px rgba(220, 150, 20, 0.3); }
+.piece.on:active { transform: translateY(-5px) scale(0.95); }
+.piece.out { color: rgba(29, 47, 58, 0.38); }
+.piece.out > .i { color: rgba(29, 47, 58, 0.25) !important; }
+.piece.out .cnt { background: rgba(29, 47, 58, 0.08); color: rgba(29, 47, 58, 0.45); }
+.jhint { position: absolute; left: 12px; right: 12px; top: 748px; font-size: 12px; color: var(--txt2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.go { position: absolute; left: 12px; top: 782px; width: 366px; height: 52px; display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: 20px; overflow: hidden; }
+.go b { font: 700 19px var(--f-glass); letter-spacing: 0.06em; text-transform: uppercase; }
+.go kbd { font: 500 10px var(--f-mono); padding: 1px 6px; border-radius: 5px; background: rgba(255, 255, 255, 0.45); box-shadow: inset 0 1px 0 #fff; }
+.cell { stroke: rgba(255, 255, 255, 0.5); stroke-width: 1; fill-opacity: 0.74; }
+.chev { fill: none; stroke: #f2ad12; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; animation: chev 1.6s ease-in-out infinite; filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.9)); }
+.streak { fill: none; stroke: rgba(29, 47, 58, 0.45); stroke-width: 1.6; stroke-linecap: round; stroke-dasharray: 7 30; animation: blow 1.2s linear infinite; }
+.sel { fill: rgba(255, 255, 255, 0.28); stroke: #fff; stroke-width: 2.5; stroke-dasharray: 6 4; animation: march 1s linear infinite; }
+.hl { fill: #fffaf0; } .hr { fill: #ecdfc8; } .roof { fill: #e98b6d; } .roof2 { fill: #cf7457; } .win { fill: #5e7b8d; }
+.rock-t { fill: #b8c0c8; } .rock-l { fill: #98a2ac; } .rock-r { fill: #7f8a95; }
+.hay-t { fill: #f2cf6a; } .hay-s { fill: #e0b043; } .hay-l { stroke: #c79630; stroke-width: 1; fill: none; }
+.trunk { stroke: #8a6a48; stroke-width: 3; stroke-linecap: round; } .crown { fill: #5fb174; }
+.wood { fill: #c9955f; } .wood2 { fill: #a87645; } .post { fill: #8a5e35; }
+
+@keyframes ring { 0% { transform: scale(0.85); opacity: 0.9; } 100% { transform: scale(1.3); opacity: 0; } }
+@keyframes sheen { 0%, 55% { left: -80px; } 100% { left: 110%; } }
+@keyframes flash { 0%, 88%, 100% { opacity: 0.25; } 90%, 94% { opacity: 1; } 92% { opacity: 0.4; } }
+@keyframes chev { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@keyframes blow { from { stroke-dashoffset: 37; } to { stroke-dashoffset: 0; } }
+@keyframes march { to { stroke-dashoffset: -20; } }
+@media (prefers-reduced-motion: reduce) { .scr *, .scr *::after { animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kick">Порыв · прототип · стекло по островам</div>
+    <h1>Меню и уровень: стекло с цветными кнопками</h1>
+    <p>Карту можно листать: проведи вверх-вниз, покрути колесо или нажми цветные точки справа. Фон плавно перетекает в цвет следующего острова, игровое окно берёт тот же цвет. «Все острова» отдаляет камеру; на обзоре нажми остров, чтобы вернуться. Прошлые наряды — <a href="map-skins.html">карта</a>, <a href="level-skins.html">уровень</a>.</p>
+  </header>
+  <div class="bar">
+    <div class="seg" id="blur" role="group" aria-label="Размытие стекла"><button type="button" data-b="0" aria-pressed="true">Стекло без размытия</button><button type="button" data-b="1" aria-pressed="false">С размытием (дороже)</button></div>
+    <div class="seg" id="lang" role="group" aria-label="Язык"><button type="button" data-l="ru" aria-pressed="true">RU</button><button type="button" data-l="en" aria-pressed="false">EN</button></div>
+    <div class="seg" id="size" role="group" aria-label="Размер"><button type="button" data-k="fit" aria-pressed="true">Вписать</button><button type="button" data-k="1" aria-pressed="false">1:1</button></div>
+  </div>
+  <div class="row stage" id="stage">
+    <section class="v"><h2>Меню · карта островов</h2><div class="frame"><div class="scr" id="menu"></div></div></section>
+    <section class="v"><h2>Игровое окно</h2><div class="frame"><div class="scr" id="game"></div></div></section>
+  </div>
+  <div class="notes">
+    <section class="note"><h3>Цвет острова</h3><ul>
+      <li>У каждого острова своя палитра фона; при листании камеры она смешивается с соседней по ходу движения.</li>
+      <li>Кнопки от острова не зависят — меняется только фон. В цвет острова — лишь его подпись на обзоре и точка справа.</li>
+    </ul></section>
+    <section class="note"><h3>Кнопки</h3><ul>
+      <li>Всё, что нажимается, — плоская пастель со светлой кромкой и мягкой тенью, по образцу «Играть». Объёма нет.</li>
+      <li>Жёлтый — главное действие: «Играть», «Ветер!», текущий уровень, подсказка. Серый — второстепенные: «Все острова», меню, «Отменить», песочница. Голубой — «Повернуть» и «Перенести», мятный — «Готово». Уровни — белые.</li>
+      <li>Счёт звёзд наверху не нажимается — он стеклянный, как панели.</li>
+      <li>RU / EN сверху — проверить, что подписи не съезжают на английском.</li>
+      <li>Фигуры в журнале — белые карточки, как в игре; кончившаяся — стекло с бледной иконкой. Закрытый уровень — тоже стекло.</li>
+    </ul></section>
+    <section class="note"><h3>Стекло дёшево</h3><ul>
+      <li>Панели — полупрозрачный белый градиент, светлая кромка и блик; размытия фона нет, поэтому слабому телефону не нужно перерисовывать то, что под панелью.</li>
+      <li>Переключатель сверху включает настоящее размытие — для сравнения, насколько оно что-то добавляет.</li>
+    </ul></section>
+  </div>
+</div>
+
+<script>
+// ---------- острова: палитра фона и данные карточки ----------
+const ISL = [
+  { name: 'Деревня', place: 'хаты у скал и река', cc: '#4f8a4b', tint: '#dfe9cc', pal: ['#e3eed3', '#cbdfbc', '#b3d0a6', '#fbf9e2', '#e3f1c4'], deco: 'village',
+    stars: [3, 3, 2, 3, 3, 2, 3, 3, 2, 3], cur: -1, hats: ['#e9b949', '#5e9e4f', '#4f7fbf', '#c2553f', '#8e5aa8', '#e08a3c'], newp: 'Забор, Дерево, Хижина, Плетень',
+    lv: { ix: 5, name: 'Два забора', wind: 22, hint: 'Две хаты далеко друг от друга — каждой свой забор. Ставь поперёк ветра перед хатой.' } },
+  { name: 'Город', place: 'высотки, улицы и дворы', cc: '#3f6fa8', tint: '#dde3ec', pal: ['#e3e9f3', '#c9d5e7', '#afc0db', '#ffffff', '#dcdff8'], deco: 'city',
+    stars: [3, 2, 3, 3], cur: 4, hats: ['#e9b949', '#3f6fa8', '#c2553f', '#6c7a89', '#e08a3c'], newp: 'Высотка, Дом, Башня',
+    lv: { ix: 5, name: 'Новый квартал', wind: 24, hint: 'Между высотками сквозит. Закрой щель забором, чтобы новый дом устоял.' } },
+  { name: 'Мыс', place: 'ветряки на ветру', cc: '#23948a', tint: '#d6e8e6', pal: ['#d9f0ec', '#bde3dc', '#a0d4cb', '#f3fffb', '#cdf1e2'], deco: 'cape', need: 36,
+    stars: [], cur: -1, hats: ['#e9b949', '#23948a', '#c2553f', '#4f7fbf'], newp: 'Ветряк, Скала',
+    lv: { ix: 4, name: 'Забор и ветряк', wind: 21, hint: 'Ветряку нужен ветер, хате — тишина. Поставь забор так, чтобы досталось обоим.' } },
+  { name: 'Лес', place: 'лесопилка и просеки', cc: '#3c7a4c', tint: '#d5e4cf', pal: ['#d9e8d3', '#bcd4b5', '#9dbf96', '#eef6da', '#cfe5bd'], deco: 'forest', need: 54,
+    stars: [], cur: -1, hats: ['#e9b949', '#3c7a4c', '#8a6240', '#c2553f', '#5e9e4f'], newp: 'Бревно, Плетень',
+    lv: { ix: 4, name: 'Плетень вместо яблонь', wind: 23, hint: 'Яблони рубить жалко. Плетень пропускает ветер, но гасит его — поставь его перед садом.' } },
+  { name: 'Перевал', place: 'снег и приют в горах', cc: '#5d6fa0', tint: '#eef2f7', pal: ['#f2f4fa', '#dee4f0', '#c6cfe2', '#ffffff', '#e6e8fb'], deco: 'pass', need: 72,
+    stars: [], cur: -1, hats: ['#e9b949', '#5d6fa0', '#c2553f', '#8e5aa8'], newp: 'Сугроб, Палатка',
+    lv: { ix: 2, name: 'Приют', wind: 25, hint: 'Ветер несёт снег, в тишине вырастают сугробы. Не дай засыпать дорогу к приюту.' } },
+];
+// английский — чтобы проверить, что длинные и короткие подписи не съезжают
+const EN = [
+  { name: 'Village', place: 'huts by the cliffs and a river', newp: 'Fence, Tree, Hut, Wattle', lvName: 'Two Fences', hint: 'Two huts far apart — each needs its own fence. Place it across the wind, in front of the hut.' },
+  { name: 'City', place: 'towers, streets and yards', newp: 'Tower block, House, Tower', lvName: 'New Block', hint: 'The wind slips between the towers. Close the gap with a fence so the new house stands.' },
+  { name: 'Cape', place: 'windmills in the wind', newp: 'Windmill, Rock', lvName: 'Fence and Windmill', hint: 'The windmill needs wind, the hut needs calm. Place the fence so both get their share.' },
+  { name: 'Forest', place: 'sawmill and clearings', newp: 'Log, Wattle', lvName: 'Wattle Instead of Apple Trees', hint: 'Cutting the apple trees is a pity. Wattle lets wind through but slows it — put it before the orchard.' },
+  { name: 'Pass', place: 'snow and a mountain shelter', newp: 'Snowdrift, Tent', lvName: 'The Shelter', hint: 'The wind carries snow, and drifts grow where it is calm. Keep the road to the shelter clear.' },
+];
+const T = {
+  ru: { brand: 'Порыв', sub: 'острова на пути шторма', sand: 'Песочница', all: 'Все острова', play: 'Играть', need: 'нужно', island: 'Остров', of: 'из', levels: 'из 10 уровней',
+    lock: (a, n) => `пройди «${a}» и собери ${n} ★`, ms: 'м/с', hintBtn: 'Подсказка', ad: '▶ реклама', fence: 'Забор', wattle: 'Плетень', tree: 'Дерево', upto: 'до',
+    drag: 'Тяни фигуру на поле. Провести по полю — повернуть остров.', go: 'Ветер!', key: 'Пробел' },
+  en: { brand: 'Gust', sub: 'islands in the storm’s path', sand: 'Sandbox', all: 'All islands', play: 'Play', need: 'need', island: 'Island', of: 'of', levels: 'of 10 levels',
+    lock: (a, n) => `beat “${a}” and collect ${n} ★`, ms: 'm/s', hintBtn: 'Hint', ad: '▶ ad', fence: 'Fence', wattle: 'Wattle', tree: 'Tree', upto: 'up to',
+    drag: 'Drag a piece onto the field. Swipe the field to turn the island.', go: 'Wind!', key: 'Space' },
+};
+let LANG = 'ru';
+const tr = k => T[LANG][k];
+const loc = ci => LANG === 'en' ? EN[ci] : { name: ISL[ci].name, place: ISL[ci].place, newp: ISL[ci].newp, lvName: ISL[ci].lv.name, hint: ISL[ci].lv.hint };
+const TOTAL = ISL.reduce((s, I) => s + I.stars.reduce((a, b) => a + b, 0), 0);
+const isOpen = ci => ci < 2;
+
+// ---------- значки ----------
+const IC = {
+  star: '<path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.3L12 17.1l-5.7 3.1 1.2-6.3L2.8 9.5l6.4-.8z" fill="currentColor"/>',
+  play: '<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>',
+  back: '<path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  castle: '<path d="M3 21V8h1.6v1.6h1.2V8h1.6v1.6h1.2V8H10v4h4V8h1.4v1.6h1.2V8h1.6v1.6h1.2V8H21v13h-6.5v-3.5a2.5 2.5 0 0 0-5 0V21z" fill="currentColor"/><path d="M12 12V3.5l4 1.6-4 1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  new: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" fill="currentColor"/>',
+  lock: '<rect x="5.5" y="10.5" width="13" height="9.5" rx="2" fill="currentColor"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="2.2"/>',
+  storm: '<path d="M7 15.5a4 4 0 0 1-.4-8 5.5 5.5 0 0 1 10.6 1.2 3.4 3.4 0 0 1-.7 6.8z" fill="currentColor"/><path d="M12.5 13l-2.5 4.5h2.5L11 21.5l4-5.5h-2.5l1.5-3z" fill="currentColor" opacity=".7"/>',
+  menu: '<path d="M5 7h14M5 12h14M5 17h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+  undo: '<path d="M9 7L5 11l4 4M5 11h9a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  bulb: '<path d="M9 17h6M10 20.5h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>',
+  arrow: '<path d="M4 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  rot: '<path d="M19 12a7 7 0 1 1-2.1-5M19 4v4h-4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  move: '<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+  fence: '<path d="M2.5 10h19v2.4h-19zM2.5 15.5h19v2.4h-19z" fill="currentColor" opacity=".7"/><path d="M4 8l2-3.2L8 8v13H4zM10 8l2-3.2L14 8v13h-4zM16 8l2-3.2L20 8v13h-4z" fill="currentColor"/>',
+  wattle: '<path d="M6 3.5v17M12 3.5v17M18 3.5v17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".75"/><path d="M2.5 8q4.75 3.6 9.5 0t9.5 0M2.5 12.5q4.75 3.6 9.5 0t9.5 0M2.5 17q4.75 3.6 9.5 0t9.5 0" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
+  tree: '<circle cx="12" cy="9.5" r="6.5" fill="currentColor"/><path d="M12 14v7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
+};
+const icon = (k, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
+const ava = h => `<span class="ava" style="--hat:${h}"></span>`;
+// пастельная версия цвета острова — для его подписи и точки
+const soft = c => `--p1:${mix(c, '#ffffff', 0.8)};--p2:${mix(c, '#ffffff', 0.62)};--pt:${mix(c, '#000000', 0.3)};--ps:rgba(30,50,75,.16)`;
+
+// ---------- цвет ----------
+const hx = h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16));
+const toHex = a => '#' + a.map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
+const mix = (a, b, t) => toHex(hx(a).map((x, i) => x + (hx(b)[i] - x) * t));
+const ease = k => k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// ---------- мир карты: те же формулы, что в игре ----------
+const MA = 105, MD = 20, N = ISL.length;
+const centers = ISL.map((_, k) => [k % 2 ? 275 : 135, 160 + (N - 1 - k) * 145]);
+const mpt = (ci, u, v) => { const [cx, cy] = centers[ci]; return { x: cx + (u - v) * MA, y: cy + (u + v - 1) * MA / 2 }; };
+const ROWS = [[1.05, 1.05], [0.5, 1.05], [-0.05, 1.05], [-0.05, 0.5], [0.5, 0.5], [1.05, 0.5], [1.05, -0.05], [0.5, -0.05], [-0.05, -0.05]];
+function nodePt(ci, ix) {
+  const seg = []; let tot = 0;
+  for (let k = 1; k < ROWS.length; k++) { const d = Math.hypot(ROWS[k][0] - ROWS[k - 1][0], ROWS[k][1] - ROWS[k - 1][1]); seg.push(d); tot += d; }
+  let s = tot * ix / 9, k = 0;
+  while (k < seg.length - 1 && s > seg[k]) { s -= seg[k]; k++; }
+  const t = Math.min(1, s / seg[k]), a = ROWS[k], b = ROWS[k + 1];
+  return mpt(ci, a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t);
+}
+const PTS = ISL.flatMap((_, ci) => Array.from({ length: 10 }, (_, ix) => nodePt(ci, ix)));
+const boxOf = ci => { const [cx, cy] = centers[ci]; return [cx - MA * 1.1 - 40, cy - MA * 0.55 - 34, MA * 2.2 + 80, MA * 1.1 + MD + 50]; };
+const FULL = (() => { const xs = centers.map(c => c[0]), ys = centers.map(c => c[1]);
+  const x = Math.min(...xs) - MA - 16, y = Math.min(...ys) - MA / 2 - 110; return [x, y, Math.max(...xs) + MA + 16 - x, Math.max(...ys) + MA / 2 + MD + 24 - y]; })();
+const pp = ps => ps.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+const up = (p, h) => ({ x: p.x, y: p.y - h });
+function curve(ps) {
+  let d = `M${ps[0].x.toFixed(1)} ${ps[0].y.toFixed(1)}`;
+  for (let i = 0; i < ps.length - 1; i++) {
+    const p0 = ps[i - 1] || ps[i], p1 = ps[i], p2 = ps[i + 1], p3 = ps[i + 2] || p2;
+    d += ` C${(p1.x + (p2.x - p0.x) / 6).toFixed(1)} ${(p1.y + (p2.y - p0.y) / 6).toFixed(1)} ${(p2.x - (p3.x - p1.x) / 6).toFixed(1)} ${(p2.y - (p3.y - p1.y) / 6).toFixed(1)} ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+// предметы на плитах — по одному рисунку на остров
+function wbox(ci, u, v, s, h, top, left, right) {
+  const A = mpt(ci, u, v), B = mpt(ci, u + s, v), C = mpt(ci, u + s, v + s), D = mpt(ci, u, v + s);
+  return `<polygon fill="${right}" points="${pp([B, C, up(C, h), up(B, h)])}"/><polygon fill="${left}" points="${pp([D, C, up(C, h), up(D, h)])}"/><polygon fill="${top}" points="${pp([up(A, h), up(B, h), up(C, h), up(D, h)])}"/>`;
+}
+function whouse(ci, u, v, s, h, roof) {
+  const A = mpt(ci, u, v), B = mpt(ci, u + s, v), C = mpt(ci, u + s, v + s), D = mpt(ci, u, v + s), top = up({ x: (A.x + C.x) / 2, y: (A.y + C.y) / 2 }, h + s * 60);
+  return `<polygon fill="#ecdfc8" points="${pp([B, C, up(C, h), up(B, h)])}"/><polygon fill="#fffaf0" points="${pp([D, C, up(C, h), up(D, h)])}"/>
+    <polygon fill="${roof}" points="${pp([up(A, h), up(B, h), top])}"/><polygon fill="${roof}" points="${pp([up(B, h), up(C, h), top])}"/>
+    <polygon fill="${roof}" style="filter:brightness(.85)" points="${pp([up(D, h), up(C, h), top])}"/>`;
+}
+const wtree = (ci, u, v, c = '#5fb174') => { const p = mpt(ci, u, v); return `<line x1="${p.x}" y1="${p.y}" x2="${p.x}" y2="${p.y - 9}" stroke="#8a6a48" stroke-width="2.5" stroke-linecap="round"/><circle cx="${p.x}" cy="${p.y - 15}" r="8" fill="${c}"/>`; };
+const wpine = (ci, u, v) => { const p = mpt(ci, u, v); return `<path d="M${p.x} ${p.y - 26}l9 22h-18z" fill="#4f7d63"/><path d="M${p.x} ${p.y - 26}l4.5 11h-9z" fill="#fff" opacity=".85"/>`; };
+function wmill(ci, u, v) {
+  const p = mpt(ci, u, v), hub = up(p, 30);
+  return `<path d="M${p.x - 4} ${p.y}L${hub.x - 1.5} ${hub.y}h3L${p.x + 4} ${p.y}z" fill="#f2f0ea"/><g class="spin-m" style="transform-origin:${hub.x}px ${hub.y}px">
+    ${[0, 90, 180, 270].map(a => `<rect x="${hub.x - 2}" y="${hub.y - 18}" width="4" height="18" rx="1.5" fill="#fff" stroke="#c4553d" stroke-width="1" transform="rotate(${a} ${hub.x} ${hub.y})"/>`).join('')}</g><circle cx="${hub.x}" cy="${hub.y}" r="3" fill="#c4553d"/>`;
+}
+const DECO = {
+  village: ci => wtree(ci, 0.12, 0.14) + whouse(ci, 0.5, 0.15, 0.15, 13, '#c9573f') + wtree(ci, 0.86, 0.3) + whouse(ci, 0.22, 0.58, 0.14, 12, '#c9573f') + whouse(ci, 0.7, 0.62, 0.15, 13, '#5f7fa8') + wtree(ci, 0.4, 0.88),
+  city: ci => wbox(ci, 0.15, 0.15, 0.18, 46, '#c6d6e3', '#d8e3ec', '#a9bccd') + wbox(ci, 0.62, 0.2, 0.16, 34, '#d8d2e6', '#e6e1ef', '#bdb4d0') + wbox(ci, 0.25, 0.62, 0.17, 28, '#c6d6e3', '#d8e3ec', '#a9bccd') + wbox(ci, 0.66, 0.66, 0.14, 52, '#c6d6e3', '#d8e3ec', '#a9bccd'),
+  cape: ci => wmill(ci, 0.25, 0.2) + whouse(ci, 0.6, 0.18, 0.15, 12, '#c9573f') + wmill(ci, 0.7, 0.7) + wbox(ci, 0.2, 0.68, 0.12, 9, '#b8c0c8', '#a4adb6', '#8d97a1'),
+  forest: ci => [[0.12, 0.12], [0.3, 0.1], [0.12, 0.35], [0.85, 0.2], [0.82, 0.45], [0.35, 0.85], [0.6, 0.88], [0.15, 0.7]].map(([u, v]) => wtree(ci, u, v, '#3f8a54')).join('') + whouse(ci, 0.5, 0.42, 0.16, 12, '#8a6240'),
+  pass: ci => wpine(ci, 0.15, 0.15) + wpine(ci, 0.3, 0.12) + wbox(ci, 0.7, 0.2, 0.14, 10, '#b8c0c8', '#a4adb6', '#8d97a1') + whouse(ci, 0.45, 0.5, 0.16, 13, '#5d6fa0') + wpine(ci, 0.82, 0.68) + wpine(ci, 0.2, 0.8),
+};
+function worldSvg() {
+  const [fx, fy, fw, fh] = FULL;
+  let h = `<defs><pattern id="wv" width="60" height="24" patternUnits="userSpaceOnUse"><path class="wave" d="M0 12q7.5-6 15 0t15 0 15 0 15 0" fill="none" stroke-width="1.2"/></pattern></defs>
+    <rect x="${fx - 600}" y="${fy - 600}" width="${fw + 1200}" height="${fh + 1200}" fill="url(#wv)"/>`;
+  ISL.forEach((I, ci) => {
+    const T = [mpt(ci, 0, 0), mpt(ci, 1, 0), mpt(ci, 1, 1), mpt(ci, 0, 1)], dn = p => ({ x: p.x, y: p.y + MD }), [cx, cy] = centers[ci];
+    const side = '#314a66', side2 = '#26394f';
+    h += `<g data-ci="${ci}" class="plate"><ellipse cx="${cx}" cy="${cy + MD + 10}" rx="${MA * 1.12}" ry="${MA * 0.5}" fill="#1e3248" opacity=".16"/>
+      <polygon fill="${side2}" points="${pp([T[1], T[2], dn(T[2]), dn(T[1])])}"/><polygon fill="${side}" points="${pp([T[3], T[2], dn(T[2]), dn(T[3])])}"/>
+      <polygon fill="${I.tint}" points="${pp(T)}"/>${DECO[I.deco](ci)}`;
+    if (!isOpen(ci)) h += `<g opacity=".8"><ellipse cx="${cx - 30}" cy="${cy - 6}" rx="56" ry="22" fill="#fff"/><ellipse cx="${cx + 34}" cy="${cy + 4}" rx="52" ry="20" fill="#f4f6f9"/><ellipse cx="${cx}" cy="${cy - 18}" rx="40" ry="20" fill="#fff"/></g>`;
+    h += '</g>';
+  });
+  const curI = 14;
+  h += `<g fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke"><path d="${curve(PTS)}" stroke="rgba(255,255,255,.85)" stroke-width="6"/>
+    <path d="${curve(PTS)}" stroke="rgba(29,47,58,.28)" stroke-width="1.6" stroke-dasharray="2 6"/><path d="${curve(PTS.slice(0, curI + 1))}" stroke="#ffbf1a" stroke-width="4"/></g>`;
+  h += `<g id="wdots">${PTS.map((p, i) => `<circle cx="${p.x}" cy="${p.y}" r="${i === curI ? 7 : 4.5}" fill="${i < curI ? '#ffbf1a' : i === curI ? '#fff' : '#cdd5de'}" stroke="${i === curI ? '#ffbf1a' : '#fff'}" stroke-width="${i === curI ? 3.5 : 1.5}"/>`).join('')}</g>`;
+  const [sx, sy] = centers[N - 1];
+  h += `<g transform="translate(${sx + 10} ${sy - MA / 2 - 70})"><path d="M-70 26q-14-24 14-30q4-26 34-22q14-22 44-8q30-6 34 22q24 6 12 38z" fill="#3a4659"/>
+    <path class="bolt" d="M8 22l-12 22h10l-8 20 20-28h-11l8-14z" fill="#ffd23f"/><text x="0" y="-40" text-anchor="middle" font-family="Unbounded, sans-serif" font-weight="700" font-size="11" fill="#3a4659">БОЛЬШОЙ ШТОРМ</text></g>`;
+  return h;
+}
+
+// ---------- меню ----------
+const menu = document.getElementById('menu'), game = document.getElementById('game'), stage = document.getElementById('stage');
+function nodeHtml(ci, ix) {
+  const I = ISL[ci], gi = ci * 10 + ix;
+  if (ix < I.stars.length) return `<button type="button" class="node cb white" data-gi="${gi}" aria-label="${ix + 1}"><span>${ix + 1}</span>
+    <span class="srow glass">${[0, 1, 2].map(k => icon('star', k < I.stars[ix] ? 'star-on' : 'star-off')).join('')}</span></button>`;
+  if (ix === I.cur) return `<button type="button" class="node cb sun current" data-gi="${gi}" aria-label="${ix + 1}"><span class="who">${ava(I.hats[1])}</span><span>${ix + 1}</span>
+    <span class="bdg cb rose">${icon('new')}</span></button>`;
+  return `<button type="button" class="node locked" data-gi="${gi}" aria-label="${ix + 1} — закрыт">${icon('lock')}${ix === 9 ? `<span class="bdg cb slate">${icon('storm')}</span>` : ''}</button>`;
+}
+let wg, ov, zcard, backBtn, wdots, nodes, labs, dots;
+function buildMenu() {
+menu.innerHTML = `<svg class="world" viewBox="0 0 390 844" aria-hidden="true"><g id="wg">${worldSvg()}</g></svg>
+  <div class="ov" id="ov">${ISL.map((I, ci) => Array.from({ length: 10 }, (_, ix) => nodeHtml(ci, ix)).join('')).join('')}
+    ${ISL.map((I, ci) => `<button type="button" class="plab ${isOpen(ci) ? 'cb' : 'glass shut'}" data-ci="${ci}" style="${soft(I.cc)}"><span class="num">${ci + 1}</span>
+      <span class="t"><b>${loc(ci).name}</b><small>${isOpen(ci) ? `${icon('star', 'star-on')}${I.stars.reduce((a, b) => a + b, 0)}/30` : `${icon('lock')}${tr('need')} ${I.need} ★`}</small></span></button>`).join('')}</div>
+  <div class="idots" id="idots">${ISL.map((I, ci) => ci).reverse().map(ci => `<button type="button" class="idot cb" data-ci="${ci}" style="--p1:${mix(ISL[ci].cc, '#ffffff', 0.45)};--p2:${mix(ISL[ci].cc, '#ffffff', 0.3)};--ps:rgba(30,50,75,.18)" aria-label="${loc(ci).name}"></button>`).join('')}</div>
+  <div class="top"><div class="brand"><b>${tr('brand')}</b><span>${tr('sub')}</span></div>
+    <span class="chip glass">${icon('star')}<b>${TOTAL}</b><span>/${N * 30}</span></span>
+    <button type="button" class="rbtn cb grey" aria-label="${tr('sand')}" title="${tr('sand')}">${icon('castle')}</button></div>
+  <div class="zcard glass" id="zcard"></div>
+  <button type="button" class="back cb grey" id="back"><span class="disc">${icon('back')}</span>${tr('all')}</button>
+  <button type="button" class="cta cb sun">${icon('play')}<span class="cta-t"><b>${tr('play')}</b><small>${loc(1).name} · 5 · ${loc(1).lvName}</small></span></button>`;
+wg = menu.querySelector('#wg'); ov = menu.querySelector('#ov'); zcard = menu.querySelector('#zcard'); backBtn = menu.querySelector('#back'); wdots = menu.querySelector('#wdots');
+nodes = [...ov.querySelectorAll('.node')]; labs = [...ov.querySelectorAll('.plab')]; dots = [...menu.querySelectorAll('.idot')];
+}
+buildMenu();
+
+function zcardHtml(ci) {
+  const I = ISL[ci], st = I.stars.reduce((a, b) => a + b, 0);
+  const W = loc(ci);
+  return `<div class="zc-t"><span class="ch"><i></i>${tr('island')} ${ci + 1} ${tr('of')} ${N}</span><b>${W.name}</b><small>${W.place}</small></div>
+    <div class="zc-stats"><div class="zc-s">${icon('star', 'star-on')}<b>${st}</b><span>/ 30</span><div class="meter"><i style="width:${st / 30 * 100}%"></i></div></div>
+      <div class="zc-s"><b>${I.stars.length}</b><span>${tr('levels')}</span></div></div>
+    <div class="zc-foot"><span class="folk">${I.hats.map(ava).join('')}</span>${isOpen(ci) ? `<span>${icon('new')}${W.newp}</span>` : `<span class="zc-lock">${icon('lock')}${tr('lock')(loc(ci - 1).name, I.need)}</span>`}</div>`;
+}
+
+// камера: t — остров (дробный между соседями), z — 1 у острова, 0 на обзоре
+const cam = { t: 1, z: 1, shown: -1 };
+function paint() {
+  const i = Math.max(0, Math.min(N - 2, Math.floor(cam.t))), f = Math.max(0, Math.min(1, cam.t - i)), A = ISL[i], B = ISL[i + 1];
+  // фон и цвет острова — смесь соседей по положению камеры
+  const vars = ['--g1', '--g2', '--g3', '--b1', '--b2'].map((k, n) => [k, mix(A.pal[n], B.pal[n], f)]).concat([['--cc', mix(A.cc, B.cc, f)]]);
+  for (const [k, v] of vars) stage.style.setProperty(k, v);
+  const bi = boxOf(i), bj = boxOf(i + 1), bz = bi.map((v, n) => lerp(v, bj[n], f)), box = FULL.map((v, n) => lerp(v, bz[n], cam.z));
+  const top = lerp(62, 249, cam.z), bot = 746, s = Math.min(390 / box[2], (bot - top) / box[3]);
+  const tx = (390 - box[2] * s) / 2 - box[0] * s, ty = top + (bot - top - box[3] * s) / 2 - box[1] * s;
+  wg.setAttribute('transform', `translate(${tx.toFixed(2)} ${ty.toFixed(2)}) scale(${s.toFixed(4)})`);
+  menu.style.setProperty('--mt', top + 'px'); menu.style.setProperty('--mb', bot + 'px');
+  const near = Math.round(cam.t);
+  nodes.forEach((e, gi) => {
+    const p = PTS[gi], x = p.x * s + tx, y = p.y * s + ty, vis = Math.max(0, 1 - Math.abs(Math.floor(gi / 10) - cam.t) * 1.4) * cam.z;
+    e.style.left = x + 'px'; e.style.top = y + 'px'; e.style.opacity = vis; e.style.pointerEvents = vis > 0.6 ? 'auto' : 'none';
+    e.style.visibility = vis < 0.02 || y < top - 40 || y > bot + 40 ? 'hidden' : '';
+  });
+  labs.forEach((e, ci) => { const [cx, cy] = centers[ci]; e.style.left = cx * s + tx + 'px'; e.style.top = (cy - MA / 2 - 14) * s + ty + 'px'; e.style.opacity = 1 - cam.z; e.style.pointerEvents = cam.z < 0.4 ? 'auto' : 'none'; });
+  wdots.style.opacity = 1 - cam.z;
+  zcard.style.opacity = cam.z; zcard.style.pointerEvents = cam.z > 0.5 ? 'auto' : 'none';
+  backBtn.style.opacity = cam.z; backBtn.style.pointerEvents = cam.z > 0.5 ? 'auto' : 'none';
+  menu.querySelector('#idots').style.opacity = cam.z;
+  if (near !== cam.shown) { cam.shown = near; zcard.innerHTML = zcardHtml(near); dots.forEach(d => d.classList.toggle('on', +d.dataset.ci === near)); drawGame(near); }
+}
+let anim = 0;
+function fly(t, z, dur = 520) {
+  cancelAnimationFrame(anim);
+  const t0 = cam.t, z0 = cam.z, st = performance.now(), d = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : dur;
+  const step = now => { const k = d ? Math.min(1, (now - st) / d) : 1, e = ease(k); cam.t = lerp(t0, t, e); cam.z = lerp(z0, z, e); paint(); if (k < 1) anim = requestAnimationFrame(step); };
+  anim = requestAnimationFrame(step);
+}
+// листание: ведёшь пальцем вниз — камера едет вверх, к следующему острову
+let drag = null;
+menu.addEventListener('pointerdown', e => {
+  if (cam.z < 0.99 || e.target.closest('button, .zcard')) return;
+  cancelAnimationFrame(anim); drag = { y: e.clientY, t: cam.t, last: e.clientY, at: performance.now(), v: 0 }; menu.setPointerCapture(e.pointerId);
+});
+menu.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const k = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--k')) || 1, now = performance.now();
+  drag.v = (e.clientY - drag.last) / Math.max(1, now - drag.at); drag.last = e.clientY; drag.at = now;
+  cam.t = Math.max(-0.15, Math.min(N - 0.85, drag.t + (e.clientY - drag.y) / k / 230)); paint();
+});
+menu.addEventListener('pointerup', () => { if (!drag) return; const to = Math.max(0, Math.min(N - 1, Math.round(cam.t + drag.v * 0.6))); drag = null; fly(to, 1, 420); });
+menu.addEventListener('wheel', e => { e.preventDefault(); if (cam.z > 0.99 && Math.abs(e.deltaY) > 4) fly(Math.max(0, Math.min(N - 1, Math.round(cam.t) + (e.deltaY < 0 ? 1 : -1))), 1); }, { passive: false });
+menu.addEventListener('click', e => {
+  const d = e.target.closest('.idot, .plab'); if (d) return fly(+d.dataset.ci, 1);
+  if (e.target.closest('#back')) fly(cam.t, 0, 560);
+});
+
+// ---------- игровое окно ----------
+const BN = 8, BCX = 195, BCY = 395, ba = 21, BD = 16;
+const P = (u, v) => ({ x: BCX + (u - v) * ba, y: BCY + (u + v - BN) * ba / 2 });
+const HOUSES = [[5, 2], [4, 6]], ROCKS = [[0, 6]], HAYS = [[6, 4], [7, 1]], TREES = [[1, 0]], FENCE = { u: 4.12, v0: 1, v1: 4 }; // забор — три клетки, как в игре
+const STOPS = [[0, '#3b82c4'], [7, '#49b0b5'], [12, '#9ccc65'], [16, '#f4d24a'], [20, '#f39a48'], [24, '#e65f5c'], [28, '#c03f80']];
+function heat(w) {
+  for (let k = 1; k < STOPS.length; k++) if (w <= STOPS[k][0]) return mix(STOPS[k - 1][1], STOPS[k][1], (w - STOPS[k - 1][0]) / (STOPS[k][0] - STOPS[k - 1][0]));
+  return STOPS[STOPS.length - 1][1];
+}
+function windAt(i, j, base) {
+  const obs = [...HOUSES, ...ROCKS, ...HAYS, ...TREES].map(([u, v]) => ({ u, v, k: 0.7 })).concat([1, 2, 3].map(v => ({ u: 3, v, k: 0.95 })));
+  let s = 0;
+  for (const o of obs) { if (i <= o.u) continue; const dj = Math.abs(j - o.v), r = Math.exp(-(i - o.u - 1) / 2.6); s = Math.max(s, dj === 0 ? o.k * r : dj === 1 ? 0.3 * r : 0); }
+  return Math.max(2, base * (1 - s) + Math.sin(i * 1.7 + j * 2.3) * 1.6 + (j === 0 || j === 7 ? 2 : 0));
+}
+function bbox(u, v, s, h, c) { const A = P(u, v), B = P(u + s, v), C = P(u + s, v + s), D = P(u, v + s);
+  return `<polygon class="${c[2]}" points="${pp([B, C, up(C, h), up(B, h)])}"/><polygon class="${c[1]}" points="${pp([D, C, up(C, h), up(D, h)])}"/><polygon class="${c[0]}" points="${pp([up(A, h), up(B, h), up(C, h), up(D, h)])}"/>`; }
+function bhouse(i, j) {
+  const u = i + 0.2, v = j + 0.2, s = 0.6, h = 14, A = P(u, v), B = P(u + s, v), C = P(u + s, v + s), D = P(u, v + s), L = (p, q, k) => ({ x: p.x + (q.x - p.x) * k, y: p.y + (q.y - p.y) * k });
+  const top = up(L(A, C, 0.5), h + 12), w1 = L(D, C, 0.35), w2 = L(D, C, 0.65);
+  return `<polygon class="hr" points="${pp([B, C, up(C, h), up(B, h)])}"/><polygon class="hl" points="${pp([D, C, up(C, h), up(D, h)])}"/>
+    <polygon class="win" points="${pp([up(w1, h * 0.3), up(w2, h * 0.3), up(w2, h * 0.7), up(w1, h * 0.7)])}"/>
+    <polygon class="roof" points="${pp([up(A, h), up(B, h), top])}"/><polygon class="roof" points="${pp([up(B, h), up(C, h), top])}"/><polygon class="roof2" points="${pp([up(D, h), up(C, h), top])}"/><polygon class="roof2" points="${pp([up(A, h), up(D, h), top])}"/>`;
+}
+function bhay(i, j) { const c = P(i + 0.5, j + 0.5); return `<ellipse class="hay-s" cx="${c.x}" cy="${c.y}" rx="11" ry="5.5"/><rect class="hay-s" x="${c.x - 11}" y="${c.y - 12}" width="22" height="12"/>
+  <ellipse class="hay-t" cx="${c.x}" cy="${c.y - 12}" rx="11" ry="5.5"/><path class="hay-l" d="M${c.x - 11} ${c.y - 6}q11 6 22 0"/><ellipse class="hay-t" cx="${c.x}" cy="${c.y - 17}" rx="6" ry="3"/>`; }
+function btree(i, j) { const c = P(i + 0.5, j + 0.5); return `<line class="trunk" x1="${c.x}" y1="${c.y}" x2="${c.x}" y2="${c.y - 12}"/><circle class="crown" cx="${c.x}" cy="${c.y - 20}" r="10"/>`; }
+function bfence() {
+  const { u, v0, v1 } = FENCE, h = 11, t = 0.12, A = P(u, v0), B = P(u, v1), A2 = P(u + t, v0), B2 = P(u + t, v1);
+  let g = `<polygon class="wood2" points="${pp([A2, B2, up(B2, h), up(A2, h)])}"/><polygon class="wood" points="${pp([up(A, h), up(B, h), up(B2, h), up(A2, h)])}"/><polygon class="wood" points="${pp([A, B, up(B, h), up(A, h)])}"/>`;
+  for (const k of [0, 1 / 3, 2 / 3, 1]) { const p = P(u, v0 + (v1 - v0) * k); g += `<rect class="post" x="${p.x - 2}" y="${p.y - h - 4}" width="4" height="${h + 6}" rx="1"/>`; }
+  return g;
+}
+function boardSvg(ci) {
+  const I = ISL[ci], snow = I.deco === 'pass';
+  let s = `<svg class="board" viewBox="0 0 390 844" aria-hidden="true">`;
+  const T = [P(0, 0), P(BN, 0), P(BN, BN), P(0, BN)], dn = p => ({ x: p.x, y: p.y + BD });
+  s += `<ellipse cx="${BCX}" cy="${BCY + BD + 14}" rx="${BN * ba * 1.1}" ry="${BN * ba * 0.5}" fill="#1e3248" opacity=".18"/>`;
+  s += `<polygon fill="#26394f" points="${pp([T[1], T[2], dn(T[2]), dn(T[1])])}"/><polygon fill="#314a66" points="${pp([T[3], T[2], dn(T[2]), dn(T[3])])}"/><polygon fill="${snow ? '#f7f9fc' : I.tint}" points="${pp(T)}"/>`;
+  for (let i = 0; i < BN; i++) for (let j = 0; j < BN; j++) s += `<polygon class="cell" fill="${heat(windAt(i, j, I.lv.wind))}" points="${pp([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)])}"/>`;
+  s += `<polygon class="sel" points="${pp([P(3.9, 0.85), P(4.5, 0.85), P(4.5, 4.15), P(3.9, 4.15)])}"/>`;
+  let n = 0;
+  for (let i = 0; i < BN; i++) for (let j = 0; j < BN; j++) if (windAt(i, j, I.lv.wind) > 15 && (i * 3 + j * 5) % 4 === 0) {
+    const A = P(i + 0.1, j + 0.5), B = P(i + 0.95, j + 0.5);
+    s += `<path class="streak" style="animation-delay:${-(n++ * 0.37) % 1.2}s" d="M${A.x.toFixed(1)} ${A.y.toFixed(1)} L${B.x.toFixed(1)} ${B.y.toFixed(1)}"/>`;
+  }
+  for (let j = 0; j < BN; j++) { const c = P(-0.55, j + 0.5); s += `<path class="chev" d="M${c.x - 4} ${c.y - 6}l6 6-6 6" transform="rotate(26.6 ${c.x} ${c.y})" style="animation-delay:${j * 0.12}s"/>`; }
+  const items = [...TREES.map(p => ['t', ...p]), ...ROCKS.map(p => ['r', ...p]), ...HAYS.map(p => ['h', ...p]), ...HOUSES.map(p => ['H', ...p]), ['f', 4, 2]].sort((x, y) => (x[1] + x[2]) - (y[1] + y[2]));
+  for (const [k, i, j] of items) s += k === 't' ? btree(i, j) : k === 'r' ? bbox(i + 0.15, j + 0.15, 0.7, 16, ['rock-t', 'rock-l', 'rock-r']) : k === 'h' ? bhay(i, j) : k === 'H' ? bhouse(i, j) : bfence();
+  return s + '</svg>';
+}
+function drawGame(ci) {
+  const I = ISL[ci], W = loc(ci), rot = up(P(4.1, 0.45), 18), chk = up(P(4.1, 4.55), 12), mov = up(P(4.12, 2.5), 44);
+  game.innerHTML = `${boardSvg(ci)}
+    <button type="button" class="ctrl cb sky" style="left:${rot.x}px;top:${rot.y}px" aria-label="Повернуть">${icon('rot')}</button>
+    <button type="button" class="ctrl cb sky" style="left:${mov.x}px;top:${mov.y}px" aria-label="Перенести">${icon('move')}</button>
+    <button type="button" class="ctrl cb mint" style="left:${chk.x}px;top:${chk.y}px" aria-label="Готово">${icon('check')}</button>
+    <div class="topbar glass">
+      <button type="button" class="mbtn cb grey" aria-label="Меню">${icon('menu')}</button>
+      <div class="lvl"><span class="ch">${W.name} · ${I.lv.ix} ${tr('of')} 10</span><b>${W.lvName}</b><p>${W.hint}</p></div>
+      <div class="wind"><div class="wn">${icon('arrow')}<b>${I.lv.wind}</b><span>${tr('ms')}</span></div><div class="legend"><i></i><span>0</span><span>14</span><span>28 ${tr('ms')}</span></div></div>
+    </div>
+    <button type="button" class="undo cb grey" aria-label="Отменить">${icon('undo')}</button>
+    <button type="button" class="bulb cb sun" aria-label="Подсказка">${icon('bulb')}</button>
+    <div class="bcap glass">${tr('hintBtn')}<small>${tr('ad')}</small></div>
+    <div class="journal glass"><span class="handle"></span></div>
+    <div class="inv">
+      <button type="button" class="piece card on"><span class="cnt">×1</span>${icon('fence').replace('class="i ', 'style="color:#c08a52" class="i ')}<b>${tr('fence')}</b><small>${tr('upto')} 22 ${tr('ms')}</small></button>
+      <button type="button" class="piece card"><span class="cnt">×1</span>${icon('wattle').replace('class="i ', 'style="color:#9c7a46" class="i ')}<b>${tr('wattle')}</b><small>${tr('upto')} 18 ${tr('ms')}</small></button>
+      <button type="button" class="piece glass out"><span class="cnt">×0</span>${icon('tree')}<b>${tr('tree')}</b><small>${tr('upto')} 26 ${tr('ms')}</small></button>
+    </div>
+    <div class="jhint">${tr('drag')}</div>
+    <button type="button" class="go cb sun"><b>${tr('go')}</b><kbd>${tr('key')}</kbd></button>`;
+  fitHint();
+}
+// длинное название встаёт в две строки — описанию остаётся две; считаем и после загрузки шрифта
+function fitHint() { const t = game.querySelector('.lvl b'); if (t) game.querySelector('.lvl p').style.webkitLineClamp = t.offsetHeight > 24 ? 2 : 3; }
+document.fonts.ready.then(fitHint);
+paint();
+
+// ---------- страница ----------
+let mode = 'fit';
+function fit() {
+  const W = stage.clientWidth - 2, gap = 28;
+  const k2 = (W - gap) / 2 / 406, k = mode === 'fit' ? Math.min(0.95, k2 >= 0.6 ? k2 : W / 406) : Math.min(1, W / 406);
+  document.documentElement.style.setProperty('--k', k.toFixed(3));
+}
+function seg(sel, on) { document.querySelectorAll(sel + ' button').forEach(b => b.addEventListener('click', () => { document.querySelectorAll(sel + ' button').forEach(x => x.setAttribute('aria-pressed', x === b)); on(b); })); }
+seg('#size', b => { mode = b.dataset.k; fit(); });
+seg('#blur', b => stage.classList.toggle('blur', b.dataset.b === '1'));
+seg('#lang', b => { LANG = b.dataset.l; buildMenu(); cam.shown = -1; paint(); });
+new ResizeObserver(fit).observe(stage); fit();
+</script>
+</body>
+</html>
