@@ -824,13 +824,6 @@ const LEVELS = [
     fixed: [{ type: 'hut', x: 4, y: 3, rot: 0 }, { type: 'hut', x: 6, y: 3, rot: 0 }, { type: 'hut', x: 8, y: 3, rot: 0 }, { type: 'chimney', x: 1, y: 9, rot: 0 }, { type: 'tree', x: 0, y: 0, rot: 0 }, { type: 'kiosk', x: 5, y: 9, rot: 0 }],
     inv: { slab: 1 },
     solution: [{ type: 'slab', x: 2, y: 3, rot: 1 }] },
-  { name: 'Двор', chapter: 'Город', wind: 16, dir: [1, 0], duration: 10, shift: { at: 4.5, dir: [0, 1] }, roads: [[[0, 8], [9, 8]]],
-    hint: 'Ветер повернёт: жёлтые стрелки — сначала, синие — через 4.5 с. Угловой дом закрывает двор сразу с двух сторон: обними им хижину с обеих сторон, откуда будет дуть.',
-    intro: [['vera', 'Мой домик посреди двора, а ветер в городе крутит.'], ['keeper', 'Ветер повернёт: сначала дует от жёлтых стрелок, через 4.5 секунды — от синих. Угловой дом крепкий, держит 18, и прикрывает сразу с двух сторон.']],
-    outro: [['vera', 'Как за каменной стеной. Даже за двумя!']],
-    fixed: [{ type: 'hut', x: 6, y: 5, rot: 0 }, { type: 'kiosk', x: 1, y: 1, rot: 0 }, { type: 'tree', x: 8, y: 1, rot: 0 }, { type: 'tree', x: 1, y: 6, rot: 0 }, { type: 'kiosk', x: 9, y: 9, rot: 0 }],
-    inv: { corner: 1 },
-    solution: [{ type: 'corner', x: 5, y: 4, rot: 0 }] },
   { name: 'Новый квартал', chapter: 'Город', wind: 19, dir: [1, 0], roads: [[[0, 7], [9, 7]], [[8, 0], [8, 7]]],
     hint: 'Два приёма сразу: дерево — на струю из щели между высотками, дом — в тень за высоткой.',
     intro: [['lena', 'Новый квартал: дом и дерево. Только между высотками опять щель.'], ['keeper', 'Ты уже знаешь, что делать: струю — деревом, дом — в тень.']],
@@ -838,7 +831,14 @@ const LEVELS = [
     fixed: [{ type: 'slab', x: 3, y: 1, rot: 1 }, { type: 'slab', x: 3, y: 4, rot: 1 }, { type: 'hut', x: 6, y: 3, rot: 0 }, { type: 'tree', x: 1, y: 9, rot: 0 }, { type: 'kiosk', x: 5, y: 9, rot: 0 }, { type: 'tree', x: 9, y: 2, rot: 0 }],
     inv: { tree: 1, house: 1 },
     solution: [{ type: 'tree', x: 1, y: 3, rot: 0 }, { type: 'house', x: 5, y: 1, rot: 0 }] },
-  { name: 'Две щели', chapter: 'Город', wind: 17, dir: [1, 0], roads: [[[0, 8], [9, 8]]],
+  { name: 'Двор', chapter: 'Город', wind: 16, dir: [1, 0], duration: 10, shift: { at: 4.5, dir: [0, 1] }, roads: [[[0, 8], [9, 8]]],
+    hint: 'Ветер повернёт: жёлтые стрелки — сначала, синие — через 4.5 с. Угловой дом закрывает двор сразу с двух сторон: обними им хижину с обеих сторон, откуда будет дуть.',
+    intro: [['vera', 'Мой домик посреди двора, а ветер в городе крутит.'], ['keeper', 'Ветер повернёт: сначала дует от жёлтых стрелок, через 4.5 секунды — от синих. Угловой дом крепкий, держит 18, и прикрывает сразу с двух сторон.']],
+    outro: [['vera', 'Как за каменной стеной. Даже за двумя!']],
+    fixed: [{ type: 'hut', x: 6, y: 5, rot: 0 }, { type: 'kiosk', x: 1, y: 1, rot: 0 }, { type: 'tree', x: 8, y: 1, rot: 0 }, { type: 'tree', x: 1, y: 6, rot: 0 }, { type: 'kiosk', x: 9, y: 9, rot: 0 }],
+    inv: { corner: 1 },
+    solution: [{ type: 'corner', x: 5, y: 4, rot: 0 }] },
+  { name: 'Две щели', chapter: 'Город', wind: 19, dir: [1, 0], roads: [[[0, 8], [9, 8]]],
     hint: 'Три высотки — две щели, две струи. На каждую — по дереву.',
     intro: [['tolik', 'Тут целых две щели, и обе дуют в хаты.'], ['keeper', 'Две струи — два дерева. Ищи красные полосы.']],
     outro: [['tolik', 'Обе заткнули. Красота.']],
@@ -1200,7 +1200,7 @@ const PAR = { 'Первый порыв': 0.64, 'Сад': 0.79, 'Новый до�
   'Буря': 0.68, 'Переулок': 0.76, 'Квартал у моря': 0.82, 'Перекрёсток': 0.85, 'Набережная': 0.93, 'Котельная': 0.94,
   'Сквозняк': 0.77, 'Шлюз': 0.91, 'Снежный перевал': 0.84, 'Вырубка': 0.88, 'Ветряная ферма': 0.92, 'Тень высотки': 0.63,
   'Щель': 0.9, 'Высотка-щит': 0.85, 'Двор': 0.86, 'Новый квартал': 0.91, 'Без щелей': 0.73, 'Буря над городом': 0.87,
-  'Первый ветряк': 0.89, 'Струя для ветряка': 0.32, 'Новоселье': 0.53, 'Хаты в ряд': 0.74, 'Две щели': 0.82, 'Улица у высоток': 0.92,
+  'Первый ветряк': 0.89, 'Струя для ветряка': 0.32, 'Новоселье': 0.53, 'Хаты в ряд': 0.74, 'Две щели': 0.91, 'Улица у высоток': 0.92,
   'Два ветряка': 0.4, 'Забор и ветряк': 0.35, 'Порыв': 0.71, 'Два порыва': 0.66, 'Первое бревно': 0.82, 'Просека': 0.73,
   'Снег на перевале': 0.26, 'Приют': 0.46, 'Хата и ветряк': 0.93, 'Не гуськом': 0.67, 'Ветряк-заслонка': 0.91, 'Ветер с двух сторон': 0.56,
   'Две струи': 0.91, 'С краю': 0.88, 'Три бревна': 0.66, 'Плетень вместо яблонь': 0.81, 'Улица за рощей': 0.88, 'Дыра в заслоне': 0.89,
@@ -1414,6 +1414,9 @@ function shedStep(world, t, dt) {
 function hasShed(world) { return world.pieces.some(p => TYPES[p.type].kind === 'shed' && !p.broken); }
 
 function isHouse(T) { return !!T.limit && T.kind !== 'fence'; }
+// неподвижные высотки и башни уровня не ломаются: это преграды, а не то, что игрок защищает
+// («сломалась высотка, которую я не трогал» — ИИ-плейтест 2026-10-25). Поставленные игроком — ломаются
+const solidFixed = pc => !!pc.fixed && !!TYPES[pc.type].tall;
 // соседи по стене для сцепки
 function computeAdjacency(world) {
   const own = new Map();
@@ -1599,7 +1602,7 @@ function runStep(world, dt) {
     pc.load += (raw - pc.load) * Math.min(1, dt / 0.3);
     pc.peak = Math.max(pc.peak, pc.load);
     if (M.smoke && pc.fixed && isHouse(T) && T.kind !== 'shed') pc.expo += ringMean(world, pc, s.c) * dt;
-    if (world.mode === 'none') continue;
+    if (world.mode === 'none' || solidFixed(pc)) continue;
     const lim = limitOf(world, pc);
     if (world.mode === 'threshold') {
       if (pc.load > lim) { pc.brokeAt = world.t; broke.push(pc); }
@@ -1630,7 +1633,7 @@ function evaluate(world) {
     if (T.kind === 'gate' && pc.jammed && M.gateBudget && !fails.some(f => f.kind === 'jam')) { fails.push({ kind: 'jam', pc, text: 'ворота заклинило — держал закрытыми слишком долго' }); score += 3; }
     if (!T.limit) continue;
     if (pc.broken) fails.push({ kind: 'broken', pc, text: pc.brokeBy === 'tent' ? `${pname(pc)}: снесло палаткой` : `${pname(pc)}: сдуло` });
-    if (!pc.broken) score += Math.max(0, pc.peak - limitOf(world, pc) * K);
+    if (!pc.broken && !solidFixed(pc)) score += Math.max(0, pc.peak - limitOf(world, pc) * K);
     if (pc.broken) score += 3;
   }
   if (M.drift) {
@@ -2295,7 +2298,7 @@ function tapBoard(e, hit) {
     if (placeAt(t, cx - off[0], cy - off[1], rot)) { if (canTake(t)) st.sel = t; record(before); }
     return;
   }
-  if (hit && hit.fixed) toast(`${pname(hit)} стоит здесь изначально, двигать нельзя. ${specText(hit.type)}.`);
+  if (hit && hit.fixed) toast(`${pname(hit)} стоит здесь изначально, двигать нельзя. ${solidFixed(hit) ? 'Не ломается' : specText(hit.type)}.`);
 }
 function turnCam(k) { cam.target = Math.round(cam.target / (Math.PI / 2)) * (Math.PI / 2) + k * Math.PI / 2; tutCamDone(); }
 // кнопки ↻ ✥ ✓ — под выделенной фигурой; ✓ серая, пока фигура в красном
@@ -3783,7 +3786,7 @@ function drawBars() {
   const mono = getComputedStyle(document.body).getPropertyValue('--f-mono');
   for (const pc of world.pieces) {
     const T = TYPES[pc.type];
-    if ((pc.broken && !isFrozen(pc)) || !T.limit) continue;
+    if ((pc.broken && !isFrozen(pc)) || !T.limit || solidFixed(pc)) continue;
     if (build && pc.cut) continue;
     if (build) { // превью: текущая нагрузка от предпросмотра потока
       const cells = pieceCells(pc);
