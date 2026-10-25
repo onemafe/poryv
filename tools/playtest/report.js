@@ -24,7 +24,8 @@ function readTolerance(file) {
 
 // метрики одного уровня одного портрета
 function levelMetrics(j) {
-  let att = j.attempts || [];
+  // агент иногда пишет итог с пояснением («win (1★)») — берём первое слово
+  let att = (j.attempts || []).map(a => ({ ...a, result: String(a.result || '').trim().split(/[\s(]/)[0] }));
   // обучение первого уровня: первый «Ветер!» по пустому полю — по сценарию, не попытка
   if (j.n === 1 && att.length && !(att[0].moves || []).length && att[0].result === 'fail') att = att.slice(1);
   const firstWin = att.findIndex(a => a.result === 'win');
