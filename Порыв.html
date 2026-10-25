@@ -2239,24 +2239,27 @@ function onUp(e) {
   if (d.kind === 'pending-new') { if (tryCommit()) { st.sel = st.sel === d.type ? null : d.type; updateUI(); } return; }
   if (d.kind === 'pending-cam' && st.phase === 'build') tapBoard(e, d.hit);
 }
-function tapBoard(e, hit) {
-  const [bx, by] = unP(...local(e.clientX, e.clientY)), cx = Math.floor(bx), cy = Math.floor(by);
-  // вырубка: дерево → бревно, пень → посадить обратно
-  if (!st.sel && hit && hit.cut) {
-    if (!tryCommit()) return;
+// вырубка: дерево → бревно, пень → посадить обратно; true — тап ушёл на это
+function cutTap(cx, cy, hit) {
+  if (st.sel) return false;
+  if (hit && hit.cut) {
+    if (!tryCommit()) return true;
     const before = snap();
     world.pieces.splice(world.pieces.indexOf(hit), 1); st.stumps.push([hit.x, hit.y]); st.logs++;
-    rebuild(world); record(before); return;
+    rebuild(world); record(before); return true;
   }
   const si = st.stumps.findIndex(([x, y]) => x === cx && y === cy);
-  if (!st.sel && si >= 0 && !pieceAt(cx, cy)) {
-    if (!tryCommit()) return;
-    if (st.logs < 1) { toast('Нет бревна, чтобы посадить дерево обратно: верни плетень или забор в запас.'); return; }
-    const before = snap();
-    st.stumps.splice(si, 1); st.logs--;
-    world.pieces.push({ type: 'tree', x: cx, y: cy, rot: 0, fixed: true, cut: true, broken: false, load: 0, hp: 1 });
-    rebuild(world); record(before); return;
-  }
+  if (si < 0 || pieceAt(cx, cy)) return false;
+  if (!tryCommit()) return true;
+  if (st.logs < 1) { toast('Нет бревна, чтобы посадить дерево обратно: верни плетень или забор в запас.'); return true; }
+  const before = snap();
+  st.stumps.splice(si, 1); st.logs--;
+  world.pieces.push({ type: 'tree', x: cx, y: cy, rot: 0, fixed: true, cut: true, broken: false, load: 0, hp: 1 });
+  rebuild(world); record(before); return true;
+}
+function tapBoard(e, hit) {
+  const [bx, by] = unP(...local(e.clientX, e.clientY)), cx = Math.floor(bx), cy = Math.floor(by);
+  if (cutTap(cx, cy, hit)) return;
   if (hit && !hit.fixed) { if (hit !== st.selected && !tryCommit()) return; select(hit); return; }
   if (!tryCommit()) return;
   if (st.sel) { // «выбрал в запасе — тапнул по клетке»
@@ -3969,7 +3972,8 @@ if (st.agent) {
       const game = st.screen === 'game';
       return {
         screen: st.screen, level: game && !st.sandbox ? levelText(st.level) : null, phase: game ? st.phase : null,
-        window: text('#win'), talk: text('#talkSlot'), result: text('#resultSlot'), toast: text('#toast'),
+        window: text('#win'), talk: text('#talkSlot'), result: text('#resultSlot'), toast: text('#toast'), extra: text('#extra'),
+        stumps: game ? st.stumps.map(([x, y]) => cellName(x, y)) : [],
         stock: game ? Object.entries(st.inv).filter(([, n]) => n > 0).map(([t, n]) => `${TYPES[t].name} ×${n}`) : [],
         mine: game ? world.pieces.filter(p => !p.fixed).map(p => `${TYPES[p.type].name}: ${where(p)}${p.broken ? ' (сломан)' : ''}`) : [],
         fixed: game ? world.pieces.filter(p => p.fixed).map(p => `${pname(p)}: ${where(p)}${p.broken ? ' (сломан)' : ''}`) : [],
@@ -3989,7 +3993,7 @@ if (st.agent) {
     // поставить фигуру из запаса на клетки: agent.place('Забор', 'C4 D4 E4')
     place(name, cells) {
       const b = busy(); if (b) return b;
-      const t = typeOf(name); if (!t || !(t in st.inv)) return 'В запасе нет фигуры «' + name + '»';
+      const t = typeOf(name); if (!t || !(t in st.inv || (shopOf() || []).includes(t))) return 'В запасе нет фигуры «' + name + '»';
       const want = cellsOf(cells).map(String).sort().join(';'); if (!want) return 'Не понял клетки — пиши как C4';
       if (!canTake(t)) return 'Таких фигур больше нет';
       if (!tryCommit()) return 'Выделенная фигура стоит в красном';
@@ -4027,6 +4031,14 @@ if (st.agent) {
       const q = this.place(name, cells);
       if (!q.startsWith('ok')) { this.place(name, old); return q + ' — оставил на месте'; }
       return q;
+    },
+    // тап по клетке поля, как пальцем: в Лесу — срубить дерево (бревно) или посадить обратно на пень
+    tap(cell) {
+      const b = busy(); if (b) return b;
+      const c = cellsOf(cell)[0]; if (!c) return 'Не понял клетку — пиши как C4';
+      const [cx, cy] = c, hit = pieceAt(cx, cy);
+      if (cutTap(cx, cy, hit)) return done('ok: брёвен ' + st.logs);
+      return hit ? `Тут ${pname(hit)} — тап ничего не делает` : 'Пустая клетка — тап ничего не делает';
     },
     // повернуть остров: 1 — по часовой, -1 — против
     turn(k = 1) { turnCam(k > 0 ? 1 : -1); cam.a = cam.target; return 'ok'; },
