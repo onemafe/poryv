@@ -69,7 +69,7 @@ header a { color: var(--ink); font-weight: 600; }
 /* «Играть» — как в «Тумане»: тёплый жёлтый, белая кромка, мягкое свечение */
 .cb.sun { color: #4a2c00; background: linear-gradient(135deg, rgba(255, 228, 120, 0.96), rgba(255, 190, 50, 0.92)); border: 1px solid rgba(255, 255, 255, 0.75);
   box-shadow: inset 0 1px 0 #fff, inset 0 -8px 20px rgba(200, 110, 0, 0.16), 0 14px 34px rgba(220, 150, 20, 0.3); }
-.node.cb.sun, .bulb.cb.sun { box-shadow: inset 0 1px 0 #fff, inset 0 -6px 14px rgba(200, 110, 0, 0.16), 0 8px 22px rgba(220, 150, 20, 0.34); }
+.node.cb.sun, .bulb.cb.sun, .ctrl.cb.sun { box-shadow: inset 0 1px 0 #fff, inset 0 -6px 14px rgba(200, 110, 0, 0.16), 0 8px 22px rgba(220, 150, 20, 0.34); }
 
 /* ================= меню: карта островов ================= */
 .world { position: absolute; left: 0; top: 0; width: 390px; height: 844px; touch-action: none;
@@ -232,7 +232,7 @@ header a { color: var(--ink); font-weight: 600; }
     </ul></section>
     <section class="note"><h3>Кнопки</h3><ul>
       <li>Всё, что нажимается, — плоская пастель со светлой кромкой и мягкой тенью, по образцу «Играть». Объёма нет.</li>
-      <li>Жёлтый — главное действие: «Играть», «Ветер!», текущий уровень, подсказка. Серый — второстепенные: «Все острова», меню, «Отменить», песочница. Голубой — «Повернуть» и «Перенести», мятный — «Готово». Уровни — белые.</li>
+      <li>Жёлтый — главное действие: «Играть», «Ветер!», текущий уровень, подсказка. Серый — второстепенные: «Все острова», меню, «Отменить», песочница. У фигуры на поле: «Повернуть» — жёлтая, «Перенести» — белая, «Готово» — мятная. Уровни — белые.</li>
       <li>Счёт звёзд наверху не нажимается — он стеклянный, как панели.</li>
       <li>RU / EN сверху — проверить, что подписи не съезжают на английском.</li>
       <li>Фигуры в журнале — белые карточки, как в игре; кончившаяся — стекло с бледной иконкой. Закрытый уровень — тоже стекло.</li>
@@ -534,8 +534,8 @@ function boardSvg(ci) {
 function drawGame(ci) {
   const I = ISL[ci], W = loc(ci), rot = up(P(4.1, 0.45), 18), chk = up(P(4.1, 4.55), 12), mov = up(P(4.12, 2.5), 44);
   game.innerHTML = `${boardSvg(ci)}
-    <button type="button" class="ctrl cb sky" style="left:${rot.x}px;top:${rot.y}px" aria-label="Повернуть">${icon('rot')}</button>
-    <button type="button" class="ctrl cb sky" style="left:${mov.x}px;top:${mov.y}px" aria-label="Перенести">${icon('move')}</button>
+    <button type="button" class="ctrl cb sun" style="left:${rot.x}px;top:${rot.y}px" aria-label="Повернуть">${icon('rot')}</button>
+    <button type="button" class="ctrl cb white" style="left:${mov.x}px;top:${mov.y}px" aria-label="Перенести">${icon('move')}</button>
     <button type="button" class="ctrl cb mint" style="left:${chk.x}px;top:${chk.y}px" aria-label="Готово">${icon('check')}</button>
     <div class="topbar glass">
       <button type="button" class="mbtn cb grey" aria-label="Меню">${icon('menu')}</button>
