@@ -93,9 +93,10 @@ function zip(files) {
 // ---------- сборка ----------
 const { html, removed } = strip(fs.readFileSync(path.join(ROOT, 'Порыв.html'), 'utf8'));
 checkHtml(html, removed);
-const SDK = '<script src="/sdk.js"></script>\n';
-if (html.split('<script>').length !== 2) fail('не нашлось место для подключения SDK');
-const page = html.replace('<script>', () => SDK + '<script>');
+// async: зависший SDK не должен держать страницу, игра подождёт его сама и пойдёт дальше без него
+const SDK = '<script src="/sdk.js" async></script>\n';
+if (html.split('</head>').length !== 2) fail('не нашлось место для подключения SDK');
+const page = html.replace('</head>', () => SDK + '</head>');
 
 const fontsDir = path.join(ROOT, 'fonts');
 const fontNames = fs.readdirSync(fontsDir).sort();

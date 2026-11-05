@@ -1639,11 +1639,11 @@ const st = {
 //   init() → Promise                 запуск, сразу при старте игры
 //   loadingReady()                   загрузка кончилась, можно нажимать
 //   gameplay(on)                     игра идёт / остановлена (меню, пауза, окно итога, реклама, потеря фокуса)
-//   load() → Promise<данные | null>  прогресс; save(данные) — записать
+//   load() → Promise<данные | null>  прогресс; save(данные) — записать; onSynced(fn) — облако прочиталось уже во время игры
 //   lang() → 'ru'                    язык игрока
 //   onPause(fn), onResume(fn)        площадка забрала игру и вернула: стоим, потом продолжаем с того же места
 //   showInterstitial() → Promise<была ли реклама>, showRewarded() → Promise<заслужена ли награда>
-// Реализации две: Яндекс — если на странице есть его SDK (/sdk.js подключает tools/build.js), иначе заглушка (GitHub Pages, разработка).
+// Реализации две: Яндекс — если на странице есть тег его SDK (/sdk.js подключает tools/build.js), иначе заглушка (GitHub Pages, разработка).
 let SAVE_KEY = 'poryv-save-v2', OLD_SAVE_KEY = 'poryv-stars-v1';
 if (st.agent) { SAVE_KEY = 'poryv-save-agent-' + st.agent; OLD_SAVE_KEY = 'poryv-stars-agent-' + st.agent; } // @dev
 // Старые сохранения: звёзды лежали по названию уровня. Таблица — названия на момент перехода на id (2026-11-05) и прежние имена.
@@ -1673,18 +1673,25 @@ function readLocal() {
   writeLocal(data); // прежнюю запись не трогаем: перенос случается один раз, потому что новая уже есть
   return data;
 }
+// лучший результат по каждому уровню; остальные поля — из b
+function mergeSaves(a, b) {
+  const stars = {};
+  for (const d of [a, b]) if (d && d.stars) for (const id in d.stars) { const n = d.stars[id]; if (Number.isInteger(n) && n > (stars[id] || 0)) stars[id] = n; }
+  return { ...a, ...b, stars };
+}
 function stubPlatform() {
-  const pause = [], resume = [];
+  const pause = [], resume = [], holds = new Set();
   return {
-    pause, resume,
-    init() {
-      document.addEventListener('visibilitychange', () => { for (const fn of document.hidden ? pause : resume) fn(); });
-      return Promise.resolve();
-    },
+    // игру держат сразу по нескольким причинам (реклама, скрытая вкладка, потеря фокуса): отпускаем, когда снята последняя
+    hold(why) { if (!holds.size) for (const fn of pause) fn(); holds.add(why); },
+    release(why) { if (holds.delete(why) && !holds.size) for (const fn of resume) fn(); },
+    watchVisibility() { document.addEventListener('visibilitychange', () => { if (document.hidden) this.hold('hidden'); else this.release('hidden'); }); },
+    init() { this.watchVisibility(); return Promise.resolve(); },
     loadingReady() {},
     gameplay() {},
     load: () => Promise.resolve(readLocal()),
     save: writeLocal,
+    onSynced() {},
     lang: () => 'ru',
     onPause: fn => { pause.push(fn); },
     onResume: fn => { resume.push(fn); },
@@ -1692,30 +1699,70 @@ function stubPlatform() {
     showRewarded: () => Promise.resolve(true),      // а награду даём: подсказка должна работать и без площадки
   };
 }
-// Каркас: прогресс пока только локально. Облако и разбор сбоев — Р2, реклама в игре — Р3.
+// Яндекс. Сбои: SDK не ответил за SDK_WAIT — играем локально, а если он всё же придёт, подключимся на ходу.
+// Облако не прочиталось — берём локальную копию и не пишем в облако, пока чтение не удастся (пробуем снова при сохранении, не чаще READ_RETRY).
+// Облако не записалось — следующее сохранение повезёт всё заново. Реклама в игре — Р3.
+const SDK_WAIT = 5000, CLOUD_WAIT = 5000, READ_RETRY = 15000; // лимиты Яндекса: getPlayer — 20, getData и setData — 100 раз за 5 минут
 function yandexPlatform() {
   const p = stubPlatform();
-  let ysdk = null, playing = false;
-  const adv = (show, cbs) => new Promise(done => { if (!ysdk) done(false); else show(cbs(done)); });
+  let ysdk = null, player = null, playing = false, wantReady = false, latest = null;
+  let cloud = null; // что лежит в облаке; пока null — не прочитали, и писать нельзя: можно затереть прогресс с другого устройства
+  let reading = null, nextRead = 0, synced = () => {};
+  const wait = ms => new Promise(ok => setTimeout(ok, ms));
+  const expire = ms => new Promise((_, no) => setTimeout(() => no(new Error('нет ответа')), ms));
+  const send = data => Promise.resolve().then(() => player.setData(data, true)).then(() => { cloud = data; }).catch(() => {});
+  function readCloud() {
+    if (!ysdk || cloud) return Promise.resolve();
+    if (reading) return reading;
+    if (Date.now() < nextRead) return Promise.resolve();
+    reading = Promise.race([Promise.resolve().then(() => player || ysdk.getPlayer()).then(pl => { player = pl; return pl.getData(); }), expire(CLOUD_WAIT)]).then(d => {
+      cloud = d || {};
+      const merged = mergeSaves(cloud, mergeSaves(readLocal(), latest));
+      writeLocal(merged);
+      synced(merged);
+      if (JSON.stringify(merged) !== JSON.stringify(mergeSaves(cloud, null))) return send(merged);
+    }).catch(() => { nextRead = Date.now() + READ_RETRY; }).then(() => { reading = null; });
+    return reading;
+  }
+  function connect() {
+    const tag = document.querySelector('script[src="/sdk.js"]');
+    return new Promise(ok => { if (window.YaGames) ok(); else { tag.addEventListener('load', ok); tag.addEventListener('error', ok); } })
+      .then(() => window.YaGames.init()).then(sdk => {
+        ysdk = sdk;
+        ysdk.on('game_api_pause', () => p.hold('sdk'));
+        ysdk.on('game_api_resume', () => p.release('sdk'));
+        if (wantReady) ysdk.features.LoadingAPI?.ready();
+        readCloud();
+      }).catch(() => {}); // SDK нет — игра идёт сама
+  }
   return Object.assign(p, {
-    init: () => Promise.race([YaGames.init(), new Promise(r => setTimeout(r, 5000))]).then(sdk => {
-      if (!sdk) return;
-      ysdk = sdk;
-      ysdk.on('game_api_pause', () => { for (const fn of p.pause) fn(); });
-      ysdk.on('game_api_resume', () => { for (const fn of p.resume) fn(); });
-    }).catch(() => {}), // SDK не ответил — играем без площадки
-    loadingReady() { if (ysdk) ysdk.features.LoadingAPI.ready(); },
+    init() {
+      p.watchVisibility();
+      // при Alt+Tab события SDK не приходят, а игра должна встать; в рамке площадки фокус возвращается и с первым касанием
+      addEventListener('blur', () => p.hold('focus'));
+      addEventListener('focus', () => p.release('focus'));
+      addEventListener('pointerdown', () => p.release('focus'), true);
+      return Promise.race([connect(), wait(SDK_WAIT)]);
+    },
+    loadingReady() { if (ysdk) ysdk.features.LoadingAPI?.ready(); else wantReady = true; },
     gameplay(on) {
       if (!ysdk || on === playing) return;
       playing = on;
-      if (on) ysdk.features.GameplayAPI.start(); else ysdk.features.GameplayAPI.stop();
+      if (on) ysdk.features.GameplayAPI?.start(); else ysdk.features.GameplayAPI?.stop();
     },
+    load: () => readCloud().then(() => mergeSaves(cloud, readLocal())),
+    save(data) {
+      latest = data;
+      writeLocal(data);
+      if (cloud) send(mergeSaves(cloud, data)); else readCloud(); // прочитается — само сольёт и запишет
+    },
+    onSynced(fn) { synced = fn; },
     lang: () => (ysdk ? ysdk.environment.i18n.lang : 'ru'),
-    showInterstitial: () => adv(o => ysdk.adv.showFullscreenAdv(o), done => ({ callbacks: { onClose: shown => done(!!shown), onError: () => done(false), onOffline: () => done(false) } })),
-    showRewarded: () => { let earned = false; return adv(o => ysdk.adv.showRewardedVideo(o), done => ({ callbacks: { onRewarded: () => { earned = true; }, onClose: () => done(earned), onError: () => done(false) } })); },
+    showInterstitial: () => new Promise(done => { if (!ysdk) done(false); else ysdk.adv.showFullscreenAdv({ callbacks: { onClose: shown => done(!!shown), onError: () => done(false), onOffline: () => done(false) } }); }),
+    showRewarded: () => new Promise(done => { let earned = false; if (!ysdk) done(false); else ysdk.adv.showRewardedVideo({ callbacks: { onRewarded: () => { earned = true; }, onClose: () => done(earned), onError: () => done(false) } }); }),
   });
 }
-const platform = window.YaGames ? yandexPlatform() : stubPlatform();
+const platform = document.querySelector('script[src="/sdk.js"]') ? yandexPlatform() : stubPlatform();
 
 // прогресс — звёзды по id уровня: ни переименование, ни перестановка уровней его не сбивают
 const starsOf = i => (i < LEVELS.length ? st.stars[LEVELS[i].id] || 0 : 0);
@@ -4258,10 +4305,26 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', refreshThe
 new MutationObserver(refreshTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 resize();
 // загрузка → остров текущего уровня крупно, внизу «Играть» (новичка она ведёт в обучение первого уровня)
+// языки игры (Р6) и какой взять, если языка игрока нет: как у Яндекса — ru для be, kk, uk, uz, en для остальных, иначе первый
+const LANGS = ['ru'];
+function pickLang(lang) {
+  if (LANGS.includes(lang)) return lang;
+  const alt = ['be', 'kk', 'uk', 'uz'].includes(lang) ? 'ru' : 'en';
+  return LANGS.includes(alt) ? alt : LANGS[0];
+}
 let firstScreen = () => showMap();
 if (st.look) { const i = LEVELS.findIndex(L => L.name === st.look); if (i >= 0) firstScreen = () => loadLevel(i); } // @dev
 // площадка и прогресс — ещё на экране загрузки. Смотр уровня (st.look) прогресс не читает: всё как в первый раз
-const prepared = platform.init().then(() => (st.look ? null : platform.load())).then(d => { if (d && d.stars) st.stars = d.stars; }).catch(() => {});
+const prepared = platform.init().then(() => {
+  // язык спрашиваем при каждом запуске (Яндекс 2.14), даже пока он один
+  html.lang = st.lang = pickLang(platform.lang());
+  return st.look ? null : platform.load();
+}).then(d => { if (d && d.stars) st.stars = d.stars; }).catch(() => {});
+platform.onSynced(d => {
+  if (st.look) return;
+  st.stars = mergeSaves({ stars: st.stars }, d).stars;
+  if (st.screen === 'map') renderMap();
+});
 platform.onPause(() => { st.halted = true; syncGameplay(); });
 platform.onResume(() => { st.halted = false; syncGameplay(); });
 document.addEventListener('visibilitychange', syncGameplay);
