@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Пока игра — один файл. После перехода на Vite здесь будет npm ci && npm run build → dist/
+      # Игра — один файл, сборка не нужна
       - name: Prepare site
         run: |
           mkdir -p _site
