@@ -123,18 +123,19 @@ function applyEdits(src, edits) {
   const cur = current(src);
   edits = JSON.parse(JSON.stringify(edits || {}));
   edits.levels ||= {}; edits.chapters ||= {}; edits.lessons ||= {};
-  const applied = [], conflicts = [], expect = []; // expect: [что должно быть, как прочитать из игры после правки]
+  const applied = [], conflicts = [], expect = [], renamed = {}; // expect: [что должно быть, как прочитать из игры после правки]
   for (const [id, E] of Object.entries(edits.levels)) {
     const L = cur.levels.find(l => l.id === id);
     if (!L) { if (FIELDS.some(k => E[k])) conflicts.push(`${id}: уровня нет в игре`); continue; }
     let name = id;
     for (const k of FIELDS) {
       if (!E[k]) continue;
+      if (same(L[k], E[k].now)) { delete E[k]; continue; } // в игре уже ровно это — правка сделана раньше
       if (!same(L[k], E[k].was)) { conflicts.push(`${id} · ${k}: в игре текст поменялся после правки`); continue; }
       src = setField(src, levelObjects(src).find(o => o.name === name).at, k, E[k].now);
       if (k === 'name') { // звёзды и PAR — по названию
         src = src.replace(/const PAR = {[^}]*}/, p => p.replace(q(name) + ':', q(E.name.now) + ':'));
-        name = E.name.now;
+        name = renamed[id] = E.name.now;
       }
       const n = name;
       expect.push([E[k].now, a => a.levels.find(l => l.id === n)?.[k], `${id} · ${k}`]);
@@ -146,6 +147,7 @@ function applyEdits(src, edits) {
   for (const [id, E] of Object.entries(edits.chapters)) {
     if (!E.intro) continue;
     const C = cur.chapters.find(c => c.id === id);
+    if (C && same(C.intro, E.intro.now)) { delete E.intro; continue; }
     if (!C || !same(C.intro, E.intro.was)) { conflicts.push(`глава ${id}: в игре текст поменялся после правки`); continue; }
     src = setField(src, chapterObjects(src).find(o => o.name === id).at, 'intro', E.intro.now);
     expect.push([E.intro.now, a => a.chapters.find(c => c.id === id)?.intro, `глава ${id}`]);
@@ -155,6 +157,7 @@ function applyEdits(src, edits) {
   for (const [g, E] of Object.entries(edits.lessons)) for (const k of Object.keys(E)) {
     if (k === 'note') continue;
     const was = cur.lessons[g]?.[k];
+    if (was != null && same(was, E[k].now)) { delete E[k]; continue; }
     if (was == null || !same(was, E[k].was)) { conflicts.push(`урок ${g} · ${k}: в игре текст поменялся после правки`); continue; }
     if (!String(E[k].now).trim()) { conflicts.push(`урок ${g} · ${k}: пустая реплика`); continue; }
     src = setField(src, lessonGroupAt(src, g), k, E[k].now);
@@ -170,9 +173,14 @@ function applyEdits(src, edits) {
     if (!same(empty(v) ? undefined : v, empty(got) ? undefined : got)) throw new Error(`${what}: вписалось не так — ничего не сохраняю`);
   }
   for (const set of ['levels', 'chapters', 'lessons']) for (const [id, E] of Object.entries(edits[set])) if (!Object.values(E).some(Boolean)) delete edits[set][id];
-  return { src, edits, applied, conflicts };
+  return { src, edits, applied, conflicts, renamed };
+}
+// тексты «в начале» (tools/texts/original.json) — по названию уровня: после переименования ключ переезжает
+function renameOriginal(orig, renamed) {
+  for (const [a, b] of Object.entries(renamed)) if (orig.levels[a]) { orig.levels[b] = orig.levels[a]; delete orig.levels[a]; }
+  return Object.keys(renamed).length > 0;
 }
 
-const api = { current, applyEdits, FIELDS, same, empty };
+const api = { current, applyEdits, renameOriginal, FIELDS, same, empty };
 if (typeof module !== 'undefined') module.exports = api; else window.TextsCore = api;
 })();

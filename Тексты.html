@@ -13,6 +13,21 @@
 body { margin: 0; background: var(--bg); color: var(--txt); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
 button, select, input, textarea { font: inherit; color: inherit; }
 
+/* слева тексты (в начале | сейчас), справа — сама игра */
+.page { display: grid; grid-template-columns: minmax(0, 1fr) var(--gw, 420px); }
+body.nogame .page { grid-template-columns: minmax(0, 1fr); }
+body.nogame .gamepane iframe, body.nogame .gamepane .gp-name { display: none; }
+body.nogame .gamepane { position: fixed; right: 12px; bottom: 12px; top: auto; height: auto; width: auto; border: 1px solid var(--line); border-radius: 10px; }
+.gamepane { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; border-left: 1px solid var(--line); background: #e9e2d2; z-index: 6; }
+.gamebar { display: flex; gap: 6px; align-items: center; padding: 8px 10px; font-size: 13px; border-bottom: 1px solid var(--line); }
+.gamebar .gp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--txt2); }
+.gamebar .btn { padding: 4px 9px; font-size: 13px; }
+.gamepane iframe { flex: 1; width: 100%; border: 0; background: #fff; }
+.play { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 1px 9px; font-size: 13px; cursor: pointer; color: var(--accent); }
+.play:hover { border-color: var(--accent); }
+.card.playing { outline: 2px solid var(--accent); outline-offset: 1px; }
+.lbl .chg { color: var(--accent); }
+
 .bar { position: sticky; top: 0; z-index: 5; background: rgba(244, 239, 228, 0.96); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
 .bar-in { max-width: 1280px; margin: 0 auto; padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
 .bar h1 { font-size: 17px; margin: 0 8px 0 0; }
@@ -27,12 +42,16 @@ button, select, input, textarea { font: inherit; color: inherit; }
 .btn.main { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn.main:disabled { background: #a9b9c6; border-color: #a9b9c6; cursor: default; }
 .btn.warn { background: var(--bad); border-color: var(--bad); color: #fff; }
-.cols { max-width: 1280px; margin: 0 auto; padding: 0 16px 8px; display: grid; grid-template-columns: 170px 1fr 1fr; gap: 12px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--txt2); }
+.cols { max-width: 1280px; margin: 0 auto; padding: 0 16px 8px; display: grid; grid-template-columns: 150px 1fr 1fr; gap: 12px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--txt2); }
 .status { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
 .status:empty { display: none; }
 .status div { margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; background: #fff; border: 1px solid var(--line); font-size: 14px; white-space: pre-line; }
 .status .bad { background: var(--badbg); border-color: #e9b9ad; }
 .status .ok { border-color: #b9d3b5; }
+.status .fold { position: relative; padding-right: 34px; }
+.status .fold > .x { position: absolute; top: 4px; right: 8px; }
+.status summary { cursor: pointer; }
+.status details[open] summary { margin-bottom: 4px; }
 
 main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .chapter { margin: 18px 0 8px; display: flex; align-items: baseline; gap: 10px; }
@@ -47,7 +66,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .tag { font-size: 12px; padding: 1px 7px; border-radius: 10px; background: var(--old); color: var(--txt2); }
 .tag.e { background: var(--editbg); color: #8a5a10; }
 
-.row { display: grid; grid-template-columns: 170px 1fr 1fr; gap: 12px; padding: 7px 0; border-top: 1px dashed var(--line); }
+.row { display: grid; grid-template-columns: 150px 1fr 1fr; gap: 12px; padding: 7px 0; border-top: 1px dashed var(--line); }
 .row > .lbl { font-size: 13px; color: var(--txt2); padding-top: 6px; }
 .row > .lbl small { display: block; font-size: 12px; opacity: .8; }
 .old { background: var(--old); border-radius: 8px; padding: 6px 10px; white-space: pre-wrap; min-height: 34px; }
@@ -79,36 +98,53 @@ textarea:focus, select:focus, input:focus { outline: 2px solid var(--accent); ou
 .gate { max-width: 560px; margin: 60px auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; }
 .gate h2 { margin: 0 0 8px; }
 
+@media (max-width: 1100px) {
+  .page { grid-template-columns: minmax(0, 1fr); }
+  .gamepane { position: fixed; right: 0; top: auto; bottom: 0; width: min(420px, 100vw); height: 70vh; border: 1px solid var(--line); box-shadow: 0 -4px 20px rgba(0,0,0,.15); }
+}
 @media (max-width: 760px) {
   .cols { display: none; }
   .row { grid-template-columns: 1fr; gap: 4px; }
   .row > .lbl { padding-top: 0; }
-  .old::before { content: 'было: '; color: var(--txt2); font-size: 12px; }
+  .old::before { content: 'в начале: '; color: var(--txt2); font-size: 12px; }
 }
 </style>
 </head>
 <body>
+<div class="page">
+<div>
 <div class="bar">
   <div class="bar-in">
     <h1>Тексты уровней</h1>
     <input type="search" id="q" placeholder="Поиск по тексту и названию">
     <select id="ch"><option value="">Все острова</option></select>
-    <label><input type="checkbox" id="onlyEdited"> только с правками</label>
+    <label title="правленые с начала, несохранённые и с заметками"><input type="checkbox" id="onlyEdited"> только изменённые</label>
     <span class="count" id="count"></span>
-    <button class="btn main" id="save" disabled title="Ctrl+S">Сохранить в игру</button>
+    <button class="btn main" id="save" disabled title="Ctrl+S">Всё сохранено</button>
   </div>
   <div class="legend" id="legend"></div>
-  <div class="cols"><span></span><span>Было — сейчас в игре</span><span>Стало — твой вариант</span></div>
+  <div class="cols"><span></span><span>В начале — до всех правок</span><span>Сейчас в игре — правь здесь</span></div>
   <div class="status" id="status"></div>
 </div>
 <main id="list">
   <div class="gate" id="gate">
     <h2>Тексты уровней «Порыва»</h2>
-    <p>Слева — что сейчас в игре, справа — твой вариант. «Сохранить в игру» сразу вписывает правки в Порыв.html.</p>
+    <p>Слева — тексты, какими они были до правок (не меняются). Посередине — что сейчас в игре, тут и правишь. «Сохранить в игру» сразу вписывает правки в Порыв.html, игра справа перезагрузится.</p>
     <p id="gate-why">Чтобы браузер мог менять файл игры, дай ему доступ к папке, где лежат Порыв.html и этот файл. Один раз — дальше он запомнит (Chrome может спросить «Разрешить» при новом открытии).</p>
     <button class="btn main" id="open">Открыть папку игры</button>
   </div>
 </main>
+</div>
+<aside class="gamepane">
+  <div class="gamebar">
+    <span class="gp-name" id="gp-name">карта островов</span>
+    <button class="btn" id="gp-reload" title="начать уровень заново, с диалогами">↻</button>
+    <button class="btn" id="gp-map" title="карта островов (все открыты)">Карта</button>
+    <select class="btn" id="gp-size" title="ширина игры"><option value="400">телефон</option><option value="640">шире</option><option value="0">скрыть</option></select>
+  </div>
+  <iframe id="game" title="Порыв"></iframe>
+</aside>
+</div>
 <script src="tools/texts/core.js"></script>
 
 <script>
@@ -146,7 +182,7 @@ const PH = {
 };
 const phs = t => [...String(t || '').matchAll(/{([^{}]+)}/g)].map(m => m[1]);
 
-let S = null;            // { levels, chapters, chars, lessons, edits }
+let S = null;            // { levels, chapters, chars, lessons, edits, orig } — orig: тексты до всех правок (tools/texts/original.json)
 let dirty = false;
 
 const $ = s => document.querySelector(s);
@@ -165,6 +201,22 @@ const grow = t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 2
 const editOf = (set, id, k) => S.edits[set]?.[id]?.[k];
 const nowOf = (set, id, k, cur) => { const e = editOf(set, id, k); return e ? e.now : cur; };
 const conflictOf = (set, id, k, cur) => { const e = editOf(set, id, k); return e && !same(e.was, cur); };
+// правки, чей текст уже стоит в игре (сохранили раньше, а копия несохранённого осталась), — сделаны, убираем
+function prune() {
+  const curOf = (set, id, k) => set === 'levels' ? S.levels.find(L => L.id === id)?.[k] : set === 'chapters' ? S.chapters.find(c => c.id === id)?.intro : S.lessons[id]?.[k];
+  for (const set of ['levels', 'chapters', 'lessons']) for (const [id, E] of Object.entries(S.edits[set])) {
+    for (const [k, e] of Object.entries(E)) if (k !== 'note' && sameText(clean({ x: { y: { k: e } } }).x.y.k.now, curOf(set, id, k))) delete E[k];
+    if (!Object.keys(E).length) delete S.edits[set][id];
+  }
+}
+// текст «в начале»; undefined — уровня или реплики тогда ещё не было
+const origOf = (set, id, k) => {
+  const O = S.orig;
+  if (set === 'levels') return O.levels[id] ? O.levels[id][k] ?? '' : undefined;
+  if (set === 'chapters') return O.chapters[id];
+  return O.lessons[id]?.[k];
+};
+const sameText = (a, b) => same(empty(a) ? '' : a, empty(b) ? '' : b);
 function setNow(set, id, k, cur, v) {
   const box = (S.edits[set] ||= {}), E = (box[id] ||= {});
   if (k === 'note') { if (v.trim()) E.note = v; else delete E.note; }
@@ -186,22 +238,29 @@ const clean = edits => {
 
 function markDirty() {
   dirty = true;
-  $('#save').disabled = false;
+  saveBtn('dirty');
   try { localStorage.setItem(BACKUP, JSON.stringify(S.edits)); } catch {}
   counts();
 }
 function counts() {
-  let n = 0, bad = 0, notes = 0;
-  const st = row => { const r = row.ref; return { e: !!editOf(r.set, r.id, r.k), c: conflictOf(r.set, r.id, r.k, r.cur) }; };
-  for (const row of document.querySelectorAll('.row')) if (row.ref) { const x = st(row); n += x.e; bad += !!x.c; }
+  let n = 0, bad = 0, notes = 0, moved = 0;
+  const st = row => { const r = row.ref; return { e: !!editOf(r.set, r.id, r.k), c: conflictOf(r.set, r.id, r.k, r.cur), m: !sameText(origOf(r.set, r.id, r.k), r.cur) }; };
+  // реплики уроков общие у нескольких уровней — считаем по одному разу
+  const seen = new Set();
+  for (const row of document.querySelectorAll('.row')) if (row.ref) {
+    const r = row.ref, key = [r.set, r.id, r.k].join('|');
+    if (seen.has(key)) continue; seen.add(key);
+    const x = st(row); n += x.e; bad += !!x.c; moved += x.m;
+  }
   for (const E of Object.values(S.edits.levels || {})) if (E.note) notes++;
-  $('#count').innerHTML = `правок: <b>${n}</b>` + (notes ? ` · заметок: ${notes}` : '') + (bad ? ` · <span class="c-bad">конфликтов: ${bad}</span>` : '') + (dirty ? ' · не сохранено' : '');
+  $('#count').innerHTML = `изменено с начала: ${moved} · несохранённых: <b>${n}</b>` + (notes ? ` · заметок: ${notes}` : '') + (bad ? ` · <span class="c-bad">конфликтов: ${bad}</span>` : '');
   for (const card of document.querySelectorAll('.card')) {
     const rows = [...card.querySelectorAll('.row')].filter(r => r.ref).map(st);
     const ne = rows.filter(x => x.e).length;
+    card.classList.toggle('moved', rows.some(x => x.m));
     card.classList.toggle('edited', ne > 0);
     card.classList.toggle('conflict', rows.some(x => x.c));
-    card.querySelector('.tag.e').textContent = ne ? `правок: ${ne}` : '';
+    card.querySelector('.tag.e').textContent = ne ? `не сохранено: ${ne}` : '';
     card.querySelector('.tag.e').classList.toggle('hidden', !ne);
   }
 }
@@ -213,7 +272,7 @@ function oldBox(dialog, cur) {
   return el('div', { class: 'old' }, ...cur.map(([w, t]) => el('div', { class: 'say' }, el('span', { class: 'who' }, who(w)), el('span', {}, t))));
 }
 
-function textEditor(set, id, k, cur, row) {
+function textEditor(set, id, k, cur, orig, row) {
   const t = el('textarea', { rows: 1 });
   t.value = nowOf(set, id, k, cur) ?? '';
   const under = el('div', { class: 'under' });
@@ -230,14 +289,15 @@ function textEditor(set, id, k, cur, row) {
       for (const p of phs(cur)) under.append(el('span', { class: phs(t.value).includes(p) ? '' : 'warn-txt' }, `{${p}} — ${PH[p] || 'подставит игра'}` + (phs(t.value).includes(p) ? '' : ' (убрано из текста)')));
       for (const p of phs(t.value)) if (!PH[p]) under.append(el('span', { class: 'warn-txt' }, `{${p}} — игра такого не знает, покажет как есть`));
     }
-    if (changed) under.append(el('button', { onclick: () => { t.value = cur ?? ''; setNow(set, id, k, cur, t.value); info(); grow(t); } }, 'вернуть как было'));
+    if (changed) under.append(el('button', { onclick: () => { t.value = cur ?? ''; setNow(set, id, k, cur, t.value); info(); grow(t); } }, 'отменить несохранённое'));
+    if (orig !== undefined && !sameText(t.value, orig)) under.append(el('button', { onclick: () => { t.value = orig ?? ''; setNow(set, id, k, cur ?? '', t.value); info(); grow(t); } }, 'вернуть как в начале'));
   };
   t.oninput = () => { grow(t); setNow(set, id, k, cur ?? '', t.value); info(); };
   info();
   return [t, under];
 }
 
-function dialogEditor(set, id, k, cur, row) {
+function dialogEditor(set, id, k, cur, orig, row) {
   const box = el('div', { class: 'new' });
   const lines = el('div', { class: 'new' });
   const under = el('div', { class: 'under' });
@@ -263,7 +323,8 @@ function dialogEditor(set, id, k, cur, row) {
       const r = line([last ? last[0] : 'keeper', '']);
       lines.append(r); r.querySelector('textarea').focus();
     } }, '+ реплика'));
-    if (changed) under.append(el('button', { onclick: () => { fill(cur); commit(); } }, 'вернуть как было'));
+    if (changed) under.append(el('button', { onclick: () => { fill(cur); commit(); } }, 'отменить несохранённое'));
+    if (orig !== undefined && !sameText(read(), orig)) under.append(el('button', { onclick: () => { fill(orig); commit(); } }, 'вернуть как в начале'));
     if (changed && !read().some(([, t]) => t.trim())) under.append(el('span', {}, set === 'lessons' ? 'Пустым быть не может.' : k === 'intro' ? 'Без диалога: уровень начнётся сразу.' : 'Без реплики: Петрович скажет обычное «Устояло».'));
   };
   fill(nowOf(set, id, k, cur));
@@ -276,11 +337,13 @@ function fieldRow(set, id, k, label, sub, cur, group) {
   const row = el('div', { class: 'row g-' + group });
   row.ref = { set, id, k, cur };
   const right = el('div', { class: 'new' });
-  row.append(el('div', { class: 'lbl' }, el('b', {}, label), sub ? el('small', {}, sub) : null), oldBox(DIALOG(set, k, cur), cur), right);
-  right.append(...(DIALOG(set, k, cur) ? dialogEditor(set, id, k, cur, row) : textEditor(set, id, k, cur, row)));
+  const orig = origOf(set, id, k), dialog = DIALOG(set, k, cur);
+  row.append(el('div', { class: 'lbl' }, el('b', {}, label), sub ? el('small', {}, sub) : null, sameText(orig, cur) ? null : el('small', { class: 'chg' }, '● изменено с начала')),
+    orig === undefined ? el('div', { class: 'old none' }, 'тогда не было') : oldBox(dialog, orig), right);
+  right.append(...(dialog ? dialogEditor(set, id, k, cur, orig, row) : textEditor(set, id, k, cur, orig, row)));
   if (conflictOf(set, id, k, cur)) {
     const e = editOf(set, id, k);
-    right.prepend(el('div', { class: 'warn-txt' }, 'Конфликт: в игре текст поменялся после твоей правки. Ты правил вот это: «' + (Array.isArray(e.was) ? e.was.map(([w, t]) => who(w) + ': ' + t).join(' / ') : e.was) + '». Проверь и поправь — правка перезапишет то, что слева.'));
+    right.prepend(el('div', { class: 'warn-txt' }, 'Конфликт: в игре текст поменялся после твоей правки. Ты правил вот это: «' + (Array.isArray(e.was) ? e.was.map(([w, t]) => who(w) + ': ' + t).join(' / ') : e.was) + '». Проверь и поправь — при сохранении правка заменит то, что сейчас в игре.'));
   }
   return row;
 }
@@ -297,7 +360,10 @@ function render() {
     list.append(el('div', { class: 'chapter', 'data-ch': C.id }, el('h2', {}, C.id), el('span', {}, `${levels.length} ур.`)));
     levels.forEach(({ L, i }, j) => {
       const card = el('section', { class: 'card', 'data-set': 'levels', 'data-id': L.id, 'data-ch': C.id },
-        el('header', {}, el('span', { class: 'num' }, `${i + 1} · ${C.id} ${j + 1}`), el('h3', {}, L.name), el('span', { class: 'tag e hidden' })));
+        el('header', {}, el('span', { class: 'num' }, `${i + 1} · ${C.id} ${j + 1}`), el('h3', {}, L.name),
+          el('button', { class: 'play', title: 'открыть уровень в игре справа — как в первый раз, с диалогами и уроком', onclick: () => playLevel(L.name) }, '▶ в игре'),
+          el('span', { class: 'tag e hidden' })));
+      card.dataset.level = L.name;
       const field = k => { const [, label, sub] = FIELDS.find(f => f[0] === k); return fieldRow('levels', L.id, k, label, sub, L[k], GROUP_OF[k]); };
       // как в игре: название → жители до уровня → подсказка → урок по ходу → совет, если сломало → реплика после победы
       card.append(field('name'), field('intro'), field('hint'));
@@ -332,6 +398,7 @@ function render() {
   requestAnimationFrame(() => document.querySelectorAll('textarea').forEach(grow));
   counts();
   filter();
+  markPlaying();
 }
 
 function filter() {
@@ -339,7 +406,7 @@ function filter() {
   for (const c of document.querySelectorAll('.card')) {
     const E = S.edits[c.dataset.set]?.[c.dataset.id];
     const text = (c.dataset.text || '') + ' ' + [...c.querySelectorAll('textarea')].map(t => t.value).join(' ').toLowerCase();
-    const show = (!ch || c.dataset.ch === ch) && (!only || c.classList.contains('edited') || (E && E.note)) && (!q || text.includes(q));
+    const show = (!ch || c.dataset.ch === ch) && (!only || c.classList.contains('edited') || c.classList.contains('moved') || (E && E.note)) && (!q || text.includes(q));
     c.classList.toggle('hidden', !show);
   }
   for (const h of document.querySelectorAll('.chapter')) h.classList.toggle('hidden', !!ch && h.dataset.ch !== ch);
@@ -357,7 +424,10 @@ function idb(mode, fn) {
   });
 }
 const game = () => dir.getFileHandle('Порыв.html');
-const editsFile = async create => (await (await dir.getDirectoryHandle('tools')).getDirectoryHandle('texts')).getFileHandle('edits.json', { create });
+const textsFile = async (name, create) => (await (await dir.getDirectoryHandle('tools')).getDirectoryHandle('texts')).getFileHandle(name, { create });
+const editsFile = create => textsFile('edits.json', create);
+// тексты «в начале» — левый столбец; сохранение их не трогает (только переносит ключ, если уровень переименовали)
+const origFile = create => textsFile('original.json', create);
 const readText = async h => (await (await h).getFile()).text();
 async function writeText(h, text) { const w = await (await h).createWritable(); await w.write(text); await w.close(); }
 
@@ -390,31 +460,75 @@ async function load() {
   try { edits = JSON.parse(await readText(editsFile(false))); } catch {}
   S = { ...TextsCore.current(src), edits };
   S.edits.levels ||= {}; S.edits.chapters ||= {}; S.edits.lessons ||= {};
+  try { S.orig = JSON.parse(await readText(origFile(false))); }
+  catch { // файла нет — «в начале» считаем то, что в игре сейчас
+    S.orig = { levels: {}, chapters: {}, lessons: S.lessons };
+    for (const L of S.levels) { const o = {}; for (const k of TextsCore.FIELDS) if (L[k] != null) o[k] = L[k]; S.orig.levels[L.id] = o; }
+    for (const c of S.chapters) S.orig.chapters[c.id] = c.intro;
+    await writeText(origFile(true), JSON.stringify(S.orig, null, 2) + '\n');
+  }
 }
 
-function status(msg, kind = '') { $('#status').replaceChildren(msg ? el('div', { class: kind }, msg) : ''); }
+// длинное сообщение (список записанного) — свёрнуто: видна первая строка, по клику раскрывается; ✕ убирает совсем
+function status(msg, kind = '') {
+  if (!msg) return $('#status').replaceChildren();
+  const [head, ...rest] = msg.split('\n');
+  const x = el('button', { class: 'x', title: 'закрыть', onclick: () => $('#status').replaceChildren() }, '✕');
+  const body = rest.join('\n').trim();
+  const n = rest.filter(l => l.trim()).length;
+  $('#status').replaceChildren(body
+    ? el('div', { class: kind + ' fold' }, x, el('details', kind === 'bad' ? { open: '' } : {}, el('summary', {}, head.replace(/:$/, '') + ` — подробнее (${n})`), body))
+    : el('div', { class: kind + ' fold' }, x, msg));
+}
+// кнопка сама говорит, что происходит: есть что сохранить / сохраняю / сохранено
+let saving = false, savedTimer = 0;
+function saveBtn(state) {
+  const b = $('#save');
+  clearTimeout(savedTimer);
+  b.disabled = state !== 'dirty';
+  b.textContent = { dirty: 'Сохранить в игру', saving: 'Сохраняю…', done: 'Сохранено ✓', clean: 'Всё сохранено' }[state];
+  if (state === 'done') savedTimer = setTimeout(() => { if (!dirty) saveBtn('clean'); }, 2500);
+}
 async function save() {
-  if (!dir) return;
+  if (saving) return;
+  if (!dir) { status('Сначала открой папку игры — без неё браузер не может записать файл.', 'bad'); return; }
+  if (!dirty) { status('Сохранять нечего — всё уже в игре.'); return; }
+  saving = true; saveBtn('saving');
+  try {
+    // Chrome отзывает доступ к папке, если вкладка долго была в фоне, — спрашиваем снова (пока длится клик)
+    if (await dir.queryPermission({ mode: 'readwrite' }) !== 'granted' && await dir.requestPermission({ mode: 'readwrite' }) !== 'granted') {
+      status('Браузер не дал доступ к папке игры — ничего не записано. Нажми «Сохранить» ещё раз и выбери «Разрешить».', 'bad');
+      return;
+    }
+    await saveNow();
+  } catch (e) {
+    status(e.name === 'NotAllowedError' || e.name === 'SecurityError'
+      ? 'Браузер не пустил к файлам, Порыв.html не тронут. Нажми «Сохранить» ещё раз — он спросит разрешение.'
+      : 'Не сохранилось, Порыв.html не тронут: ' + e.message, 'bad');
+  } finally { saving = false; if (dirty) saveBtn('dirty'); }
+}
+async function saveNow() {
   const out = clean(S.edits);
   const bad = [];
   for (const [id, E] of Object.entries(out.levels || {})) for (const k of ['name', 'hint']) if (E[k] && !E[k].now) bad.push(`${id}: ${k === 'name' ? 'название' : 'подсказка'} пустая`);
   for (const [g, E] of Object.entries(out.lessons || {})) for (const [k, e] of Object.entries(E)) if (empty(e.now)) bad.push(`урок: ${(STEPS[g]?.[k] || [k])[0]} пустой`);
   if (bad.length) { status('Не сохранено:\n' + bad.join('\n'), 'bad'); return; }
-  try {
-    // читаем игру заново: вдруг её поменяли, пока ты правил — тогда правка станет конфликтом, а не затрёт новое
-    const r = TextsCore.applyEdits(await readText(game()), out);
-    if (r.applied.length) await writeText(game(), r.src);
-    await writeText(editsFile(true), JSON.stringify(r.edits, null, 2) + '\n');
-    S = { ...TextsCore.current(r.src), edits: r.edits };
-    S.edits.levels ||= {}; S.edits.chapters ||= {}; S.edits.lessons ||= {};
-    dirty = false;
-    try { localStorage.removeItem(BACKUP); } catch {}
-    $('#save').disabled = true;
-    const y = scrollY; render(); scrollTo(0, y);
-    const time = new Date().toLocaleTimeString('ru');
-    status((r.applied.length ? `В игру записано (${time}):\n` + r.applied.join('\n') : `Сохранено (${time}).`) +
-      (r.conflicts.length ? '\n\nНе записано — посмотри красные карточки:\n' + r.conflicts.join('\n') : ''), r.conflicts.length ? 'bad' : 'ok');
-  } catch (e) { status('Не сохранилось, Порыв.html не тронут: ' + e.message, 'bad'); }
+  // читаем игру заново: вдруг её поменяли, пока ты правил — тогда правка станет конфликтом, а не затрёт новое
+  const r = TextsCore.applyEdits(await readText(game()), out);
+  if (r.applied.length) await writeText(game(), r.src);
+  await writeText(editsFile(true), JSON.stringify(r.edits, null, 2) + '\n');
+  const orig = S.orig;
+  if (TextsCore.renameOriginal(orig, r.renamed)) await writeText(origFile(true), JSON.stringify(orig, null, 2) + '\n');
+  S = { ...TextsCore.current(r.src), edits: r.edits, orig };
+  S.edits.levels ||= {}; S.edits.chapters ||= {}; S.edits.lessons ||= {};
+  dirty = false;
+  try { localStorage.removeItem(BACKUP); } catch {}
+  saveBtn('done');
+  const y = scrollY; render(); scrollTo(0, y);
+  if (r.applied.length) { if (r.renamed[gameLevel]) gameLevel = r.renamed[gameLevel]; reloadGame(); }
+  const time = new Date().toLocaleTimeString('ru');
+  status((r.applied.length ? `В игру записано (${time}):\n` + r.applied.join('\n') : `Сохранено (${time}).`) +
+    (r.conflicts.length ? '\n\nНе записано — посмотри красные карточки:\n' + r.conflicts.join('\n') : ''), r.conflicts.length ? 'bad' : 'ok');
 }
 
 $('#q').oninput = filter;
@@ -422,19 +536,53 @@ $('#ch').onchange = () => { filter(); scrollTo(0, 0); };
 $('#onlyEdited').onchange = filter;
 $('#save').onclick = save;
 addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') { e.preventDefault(); save(); } });
-addEventListener('beforeunload', e => { if (dirty) e.preventDefault(); });
+
+// ---------- игра справа ----------
+// уровень открывается как в первый раз (Порыв.html?level=…): с диалогами и уроком, прогресс игрока не трогается
+let gameLevel = null;
+try { gameLevel = localStorage.getItem('poryv-texts-level') || null; } catch {}
+function reloadGame() {
+  if (document.body.classList.contains('nogame')) return;
+  $('#game').src = 'Порыв.html?dev' + (gameLevel ? '&level=' + encodeURIComponent(gameLevel) : '') + '&t=' + Date.now();
+  $('#gp-name').textContent = gameLevel || 'карта островов';
+  markPlaying();
+}
+function playLevel(name) {
+  gameLevel = name;
+  try { if (name) localStorage.setItem('poryv-texts-level', name); else localStorage.removeItem('poryv-texts-level'); } catch {}
+  if (document.body.classList.contains('nogame')) setGameSize(400);
+  reloadGame();
+}
+function markPlaying() { for (const c of document.querySelectorAll('.card')) c.classList.toggle('playing', !!gameLevel && c.dataset.level === gameLevel); }
+function setGameSize(w) {
+  w = +w;
+  $('#gp-size').value = String(w);
+  document.body.classList.toggle('nogame', !w);
+  if (w) document.documentElement.style.setProperty('--gw', w + 'px');
+  try { localStorage.setItem('poryv-texts-gw', String(w)); } catch {}
+  if (w && !$('#game').getAttribute('src')) reloadGame();
+}
+$('#gp-reload').onclick = reloadGame;
+$('#gp-map').onclick = () => playLevel(null);
+$('#gp-size').onchange = e => setGameSize(e.target.value);
+{ let w = 400; try { const v = localStorage.getItem('poryv-texts-gw'); if (v != null) w = +v; } catch {} setGameSize(w); }
 
 async function start(ask) {
   try { if (!await connect(ask)) return; await load(); }
   catch (e) { status(e.name === 'AbortError' ? 'Папку не выбрали.' : `Не открылось (${e.name}): ${e.message}`, 'bad'); return; }
+  // несохранённое с прошлого раза (закрыл или обновил страницу) — возвращаем само
   let backup = null;
   try { backup = JSON.parse(localStorage.getItem(BACKUP)); } catch {}
-  render();
-  if (backup && !same(backup, S.edits)) {
-    $('#status').replaceChildren(el('div', { class: 'bad' }, 'Есть несохранённые правки с прошлого раза. ',
-      el('button', { class: 'btn', onclick: () => { S.edits = backup; render(); markDirty(); status('Восстановил — не забудь сохранить.'); } }, 'Восстановить'), ' ',
-      el('button', { class: 'btn', onclick: () => { try { localStorage.removeItem(BACKUP); } catch {} status(''); } }, 'Выбросить')));
+  if (backup) {
+    backup.levels ||= {}; backup.chapters ||= {}; backup.lessons ||= {};
+    const was = S.edits;
+    S.edits = backup; prune();
+    if (same(S.edits, was)) { S.edits = was; backup = null; try { localStorage.removeItem(BACKUP); } catch {} }
   }
+  if (backup) {
+    render(); markDirty();
+    status('Вернул несохранённые правки с прошлого раза — они не в игре, пока не нажмёшь «Сохранить в игру».');
+  } else render();
 }
 addEventListener('error', e => status('Ошибка на странице: ' + e.message, 'bad'));
 addEventListener('unhandledrejection', e => status('Ошибка на странице: ' + (e.reason?.message || e.reason), 'bad'));
