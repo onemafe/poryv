@@ -272,7 +272,7 @@ button.glass { cursor: pointer; padding: 0; color: var(--txt); }
 /* телефон вертикально: полоса на всю ширину сверху, журнал — шторка снизу */
 [data-layout="portrait"] .ctop { right: var(--pad-r); }
 [data-layout="portrait"] .journal { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 58%; border-bottom: 0; border-radius: 28px 28px 0 0;
-  padding: 20px var(--pad-r) var(--pad-b) var(--pad-l); gap: 10px; }
+  padding: 20px var(--pad-r) calc(var(--pad-b) + 8px) var(--pad-l); gap: 10px; } /* +8 px: снизу баннер Яндекса, по нему не должны попадать вместо «Ветер!» */
 [data-layout="portrait"] .grip { display: block; position: absolute; left: 50%; top: 8px; width: 40px; height: 5px; margin-left: -20px; border-radius: 3px; background: rgba(29, 47, 58, 0.2); }
 [data-layout="portrait"] .jinv .jl { display: none; }
 [data-layout="portrait"] .inv { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -519,8 +519,8 @@ button.glass { cursor: pointer; padding: 0; color: var(--txt); }
     <div class="fcircles" id="fcircles">
       <button class="fbtn f-undo cb grey" type="button" id="undoBtn" aria-label="Отменить" title="Отменить (Alt+Z)" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L5 11l4 4M5 11h9a5 5 0 0 1 0 10h-2"/></svg></button>
       <div class="hintwrap" id="hintWrap">
-        <button class="fbtn f-hint cb sun" type="button" id="hintBtn" aria-label="Подсказка: одна фигура встанет на своё место"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M9 17h6M10 20.5h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg></button>
-        <span class="f-cap glass" aria-hidden="true">Подсказка<span class="ad">▶ реклама</span></span>
+        <button class="fbtn f-hint cb sun" type="button" id="hintBtn" aria-label="Подсказка за рекламу: одна фигура встанет на своё место"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M9 17h6M10 20.5h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg></button>
+        <span class="f-cap glass" aria-hidden="true">Подсказка<span class="ad">▶ реклама: 1 фигура</span></span>
       </div>
     </div>
   </div>
@@ -1642,7 +1642,8 @@ const st = {
 //   load() → Promise<данные | null>  прогресс; save(данные) — записать; onSynced(fn) — облако прочиталось уже во время игры
 //   lang() → 'ru'                    язык игрока
 //   onPause(fn), onResume(fn)        площадка забрала игру и вернула: стоим, потом продолжаем с того же места
-//   showInterstitial() → Promise<была ли реклама>, showRewarded() → Promise<заслужена ли награда>
+//   showInterstitial() → Promise<{ shown }>, showRewarded() → Promise<{ shown, earned }>  реклама: была ли, заслужена ли награда
+//   flags(значения по умолчанию) → Promise<значения>  настройки, которые меняются без новой версии игры (строки)
 // Реализации две: Яндекс — если на странице есть тег его SDK (/sdk.js подключает tools/build.js), иначе заглушка (GitHub Pages, разработка).
 let SAVE_KEY = 'poryv-save-v2', OLD_SAVE_KEY = 'poryv-stars-v1';
 if (st.agent) { SAVE_KEY = 'poryv-save-agent-' + st.agent; OLD_SAVE_KEY = 'poryv-stars-agent-' + st.agent; } // @dev
@@ -1695,14 +1696,17 @@ function stubPlatform() {
     lang: () => 'ru',
     onPause: fn => { pause.push(fn); },
     onResume: fn => { resume.push(fn); },
-    showInterstitial: () => Promise.resolve(false), // рекламы здесь нет — игра сразу идёт дальше
-    showRewarded: () => Promise.resolve(true),      // а награду даём: подсказка должна работать и без площадки
+    flags: defaults => Promise.resolve(defaults),
+    showInterstitial: () => Promise.resolve({ shown: false }),            // рекламы здесь нет — игра сразу идёт дальше
+    showRewarded: () => Promise.resolve({ shown: false, earned: true }),  // а награду даём: подсказка должна работать и без площадки
   };
 }
 // Яндекс. Сбои: SDK не ответил за SDK_WAIT — играем локально, а если он всё же придёт, подключимся на ходу.
 // Облако не прочиталось — берём локальную копию и не пишем в облако, пока чтение не удастся (пробуем снова при сохранении, не чаще READ_RETRY).
-// Облако не записалось — следующее сохранение повезёт всё заново. Реклама в игре — Р3.
-const SDK_WAIT = 5000, CLOUD_WAIT = 5000, READ_RETRY = 15000; // лимиты Яндекса: getPlayer — 20, getData и setData — 100 раз за 5 минут
+// Облако не записалось — следующее сохранение повезёт всё заново.
+// Реклама: на время показа игра стоит. Сторож: блокировщик может оставить показ без onOpen или onClose — не открылась за AD_OPEN_WAIT
+// или не закрылась за AD_SHOW_WAIT, игра идёт дальше, награды нет.
+const SDK_WAIT = 5000, CLOUD_WAIT = 5000, READ_RETRY = 15000, AD_OPEN_WAIT = 10000, AD_SHOW_WAIT = 90000; // лимиты Яндекса: getPlayer — 20, getData и setData — 100 раз за 5 минут
 function yandexPlatform() {
   const p = stubPlatform();
   let ysdk = null, player = null, playing = false, wantReady = false, latest = null;
@@ -1723,6 +1727,25 @@ function yandexPlatform() {
       if (JSON.stringify(merged) !== JSON.stringify(mergeSaves(cloud, null))) return send(merged);
     }).catch(() => { nextRead = Date.now() + READ_RETRY; }).then(() => { reading = null; });
     return reading;
+  }
+  function advert(method) {
+    return new Promise(done => {
+      if (!ysdk) { done({ shown: false, earned: false }); return; }
+      let opened = false, earned = false, over = false, guard = 0;
+      const finish = shown => { if (over) return; over = true; clearTimeout(guard); p.release('ad'); done({ shown, earned }); };
+      const watch = ms => { clearTimeout(guard); guard = setTimeout(() => finish(opened), ms); };
+      p.hold('ad');
+      watch(AD_OPEN_WAIT);
+      try {
+        ysdk.adv[method]({ callbacks: {
+          onOpen() { opened = true; watch(AD_SHOW_WAIT); },
+          onRewarded() { earned = true; },
+          onClose(shown) { finish(shown === undefined ? opened : !!shown); },
+          onError() { finish(opened); },
+          onOffline() { finish(false); },
+        } });
+      } catch (e) { finish(false); }
+    });
   }
   function connect() {
     const tag = document.querySelector('script[src="/sdk.js"]');
@@ -1758,8 +1781,10 @@ function yandexPlatform() {
     },
     onSynced(fn) { synced = fn; },
     lang: () => (ysdk ? ysdk.environment.i18n.lang : 'ru'),
-    showInterstitial: () => new Promise(done => { if (!ysdk) done(false); else ysdk.adv.showFullscreenAdv({ callbacks: { onClose: shown => done(!!shown), onError: () => done(false), onOffline: () => done(false) } }); }),
-    showRewarded: () => new Promise(done => { let earned = false; if (!ysdk) done(false); else ysdk.adv.showRewardedVideo({ callbacks: { onRewarded: () => { earned = true; }, onClose: () => done(earned), onError: () => done(false) } }); }),
+    flags: defaults => (!ysdk ? Promise.resolve(defaults)
+      : Promise.race([Promise.resolve().then(() => ysdk.getFlags({ defaultFlags: defaults })), wait(CLOUD_WAIT).then(() => defaults)]).catch(() => defaults)),
+    showInterstitial: () => advert('showFullscreenAdv'),
+    showRewarded: () => advert('showRewardedVideo'),
   });
 }
 const platform = document.querySelector('script[src="/sdk.js"]') ? yandexPlatform() : stubPlatform();
@@ -2094,7 +2119,7 @@ function renderResult() {
   const box = document.createElement('div'); box.className = 'result ' + r.kind;
   if (r.kind === 'lose') box.innerHTML = `<h2>${esc(r.title)}</h2><p class="why">${esc(r.list[0].toUpperCase() + r.list.slice(1))}</p>${r.tip ? `<p>${esc(r.tip)}</p>` : ''}
     <div class="res-acts"><button type="button" class="btn go" data-act="again">Ещё раз</button>
-      ${hintable() ? `<button type="button" class="btn" data-act="hint">${icon('bulb')} Подсказка <span class="ad">реклама</span></button>` : ''}
+      ${hintable() ? `<button type="button" class="btn" data-act="hint">${icon('bulb')} Подсказка: 1 фигура <span class="ad">реклама</span></button>` : ''}
       <button type="button" class="btn" data-act="tomap">${icon('map')} Карта</button></div>`;
   else box.innerHTML = `<h2>${r.kind === 'partial' ? 'Почти' : 'Устояло'}</h2><p>${esc(r.t)}</p>
     <div class="res-acts"><button type="button" class="btn go" data-act="again">Ещё раз</button><button type="button" class="btn" data-act="tomap">${icon('map')} Карта</button></div>`;
@@ -2413,36 +2438,69 @@ function focusZoom(dt) {
   }
 }
 
+// ---------- реклама между уровнями ----------
+// Счётчик — новые уровни, пройденные с прошлой рекламы. Таймер — время с прошлой рекламы, пока игра на экране.
+// Истёк таймер или дошёл счётчик — реклама ждёт следующего запуска уровня («Дальше», «Играть», с карты).
+// «Ещё раз» и «Начать уровень заново» её не вызывают, обучение первого уровня — тоже. Ролик за подсказку сбрасывает оба.
+// Игра только что запущена: Яндекс сам показал свою рекламу, поэтому оба с нуля. Числа — флаги в Консоли Яндекса; 0 — это условие выключено.
+const AD_FLAGS = { adEveryLevels: '4', adEveryMinutes: '3' };
+const ads = { everyLevels: 4, everyMinutes: 3, levels: 0, time: 0, busy: false };
+function applyAdFlags(f) {
+  const num = (v, d) => { const n = parseFloat(v); return n >= 0 ? n : d; };
+  ads.everyLevels = num(f.adEveryLevels, ads.everyLevels); ads.everyMinutes = num(f.adEveryMinutes, ads.everyMinutes);
+}
+const adDue = () => (ads.everyLevels > 0 && ads.levels >= ads.everyLevels) || (ads.everyMinutes > 0 && ads.time >= ads.everyMinutes * 60);
+function adShown() { ads.levels = 0; ads.time = 0; }
+function startLevel(i) {
+  if (ads.busy) return;
+  if (!adDue() || (LEVELS[i].tutorial && !isDone(i))) { loadLevel(i); return; }
+  ads.busy = true;
+  platform.showInterstitial().then(r => {
+    ads.busy = false;
+    if (r.shown) adShown(); // Яндекс не показал — ничего не сбрасываем, игра сразу идёт дальше
+    loadLevel(i);
+  });
+}
+
 // ---------- подсказка и решение ----------
 const sameSpot = (a, b) => a.type === b.type && String(pieceCells(a).sort()) === String(pieceCells(b).sort());
 function hintable() { if (st.sandbox) return false; const L = LEVELS[st.level]; return !st.tut && (L.solution || []).length > 0; }
-// подсказка: одна фигура из проверенного решения встаёт на своё место, мешающие уходят в запас (реклама — Р3, через platform)
-function giveHint() {
-  if (!hintable()) return;
-  agentNote('hint'); // @dev
-  if (st.phase === 'result') resetScene();
-  if (st.phase !== 'build' || !tryCommit()) return;
-  const L = LEVELS[st.level], before = snap();
-  st.sel = null;
-  // какие фигуры игрока уже стоят по решению и какая из решения — следующая
+// подсказка за ролик: одна фигура из проверенного решения встаёт на своё место, неверные уходят в запас, верные не трогаем; ход можно отменить
+// какие фигуры игрока уже стоят по решению и какая из решения — следующая
+function hintPlan(L) {
   const mine = world.pieces.filter(p => !p.fixed), ok = new Set();
   let next = null;
   for (const s of L.solution) {
     const m = mine.find(p => !ok.has(p) && sameSpot(p, s));
     if (m) ok.add(m); else if (!next) next = s;
   }
-  if (!next) { toast('Все фигуры уже на своих местах. Жми «Ветер!»'); return; }
+  return { next, ok };
+}
+function giveHint() {
+  if (!hintable() || ads.busy) return;
+  if (st.phase === 'result') resetScene();
+  if (st.phase !== 'build' || !tryCommit()) return;
+  st.sel = null;
+  const level = st.level;
+  // всё и так стоит верно — ролик не за что
+  if (!hintPlan(LEVELS[level]).next) { toast('Все фигуры уже на своих местах. Жми «Ветер!»'); return; }
+  ads.busy = true;
+  platform.showRewarded().then(r => {
+    ads.busy = false;
+    if (r.shown) adShown();
+    if (!r.earned) { toast(r.shown ? 'Подсказка будет, если досмотреть рекламу до конца.' : 'Реклама сейчас недоступна, попробуй позже.'); return; }
+    if (st.screen === 'game' && st.level === level && st.phase === 'build') placeHint(LEVELS[level]);
+  });
+}
+function placeHint(L) {
+  agentNote('hint'); // @dev
+  const before = snap(), { next, ok } = hintPlan(L);
   let moved = 0;
-  const wrong = () => world.pieces.filter(p => !p.fixed && !ok.has(p));
-  const toStash = pc => { world.pieces.splice(world.pieces.indexOf(pc), 1); returnToStash(pc); moved++; };
-  const cells = new Set(pieceCells(next).map(String));
-  for (const p of wrong()) if (pieceCells(p).some(c => cells.has(String(c)))) toStash(p);
+  for (const p of world.pieces.filter(p => !p.fixed && !ok.has(p))) { world.pieces.splice(world.pieces.indexOf(p), 1); returnToStash(p); moved++; }
   if (shopOf()) {
-    // бревно: вернуть лишнюю фигуру или срубить дерево, которое рубят в решении
+    // бревно: срубить дерево, которое рубят в решении
     const cuts = L.solutionCuts || [], isCut = (x, y) => cuts.some(c => c[0] === x && c[1] === y);
     const getLog = () => {
-      const w = wrong()[0];
-      if (w) { toStash(w); return true; }
       const t = world.pieces.find(p => p.cut && isCut(p.x, p.y));
       if (!t) return false;
       world.pieces.splice(world.pieces.indexOf(t), 1); st.stumps.push([t.x, t.y]); st.logs++; return true;
@@ -2455,13 +2513,10 @@ function giveHint() {
       world.pieces.push({ type: 'tree', x, y, rot: 0, fixed: true, cut: true, broken: false, load: 0, hp: 1 });
     }
     while (st.logs < costOf(next.type) && getLog());
-  } else if (!(st.inv[next.type] > 0)) {
-    const w = wrong().find(p => p.type === next.type);
-    if (w) toStash(w);
   }
   rebuild(world);
   if (placeAt(next.type, next.x, next.y, next.rot)) {
-    toast(`Подсказка: ${TYPES[next.type].name.toLowerCase()} — на своём месте.` + (moved ? ' Мешавшие фигуры вернулись в запас.' : ''));
+    toast(`Подсказка: ${TYPES[next.type].name.toLowerCase()} — на своём месте.` + (moved ? ' Остальные фигуры вернулись в запас.' : ''));
     st.selected = null; st.selBad = false;
   }
   record(before);
@@ -2653,7 +2708,7 @@ const LESSONS = {
     move: 'Теперь перенеси забор на подсвеченные клетки: зажми ✥ под ним и тяни.',
     confirm: 'Забор на месте. Нажми ✓ — он встанет. Свои фигуры выделены белым, их можно снова взять, повернуть и перенести.',
     go: 'Жми «Ветер!»',
-    win: [['ilya', 'Стоит! Вот спасибо!'], ['keeper', 'Забор защищает от ветра, а за ним тихо. Так и играем, защищая постройки.']],
+    win: [['ilya', 'Стоит! Вот спасибо!'], ['keeper', 'Забор защищает от ветра, а за ним тихо. Так и играем, защищая постройки.'], ['keeper', 'Застрянешь — жми лампочку: за просмотр рекламы одна фигура встанет на своё место.']],
   },
   trash: {
     place: 'Перетащи дерево из меню на поле, чтобы закрыть хижину.',
@@ -2838,6 +2893,7 @@ function levelWon() {
     wl.ms = msFmt(load, cuts.map(c => c * lim)); wl.who = lowName(wl.pc); wl.twins = hasTwins(wl.pc);
     st.worst = { pc: wl.pc, t: wl.ms(load) };
   }
+  if (!best) ads.levels++; // новый уровень
   saveStars(st.level, n);
   const opened = CH.findIndex((_, ci) => gb[ci] !== 'open' && gate(ci) === 'open');
   return { gi: st.level, n, best, wl, cuts, before, opened, energy: world.target ? Math.round(world.energy) : null };
@@ -2919,8 +2975,7 @@ function afterWin(toMap) {
   closeWin();
   if (pendingChap != null) { const ci = pendingChap; pendingChap = null; if (toMap) showMap(ci); chapterWin(ci); return; }
   const next = current();
-  // здесь — межэкранная реклама (этап 4): только по нажатию «Дальше», не чаще раза в 30 с
-  if (!toMap && next != null) loadLevel(next); else showMap(LEVELS[st.level]._ci);
+  if (!toMap && next != null) startLevel(next); else showMap(LEVELS[st.level]._ci);
 }
 
 // ---------- главы и прогресс ----------
@@ -3313,7 +3368,7 @@ function mapAct(a, b) {
   const gi = b.dataset.gi != null ? +b.dataset.gi : null, ci = b.dataset.ci != null ? +b.dataset.ci : null;
   switch (a) {
     case 'level': openSheet(levelCard(gi), LEVELS[gi].name); break;
-    case 'play': closeSheet(); loadLevel(gi); break;
+    case 'play': closeSheet(); startLevel(gi); break;
     case 'gate': openSheet(gateCard(ci), `Остров ${CH[ci].name}`); break;
     case 'close': closeSheet(); break;
     case 'sandbox': if (sandboxOpen()) loadLevel(LEVELS.length); else toast('Песочница откроется после острова «' + CH[0].name + '»'); break;
@@ -3323,7 +3378,7 @@ function mapAct(a, b) {
     case 'res-map': afterWin(true); break;
     case 'res-again': closeWin(); resetScene(); break;
     case 'intro-go': closeWin(); break;
-    case 'chap-go': closeWin(); loadLevel(CH[ci].levels.find(i => !isDone(i)) ?? CH[ci].levels[0]); break;
+    case 'chap-go': closeWin(); startLevel(CH[ci].levels.find(i => !isDone(i)) ?? CH[ci].levels[0]); break;
   }
 }
 $('#sheetWrap').addEventListener('click', e => { if (e.target === $('#sheetWrap')) closeSheet(); });
@@ -4072,6 +4127,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   const raw = (now - last) / 1000, dt = Math.min(1 / 15, raw); last = now;
   syncGameplay();
+  if (!st.halted) ads.time += Math.min(raw, 1); // вкладку свернули надолго — это не время в игре
   // на загрузке, на карте, на паузе и когда игру забрала площадка поле стоит: не считаем и не рисуем (слабые телефоны)
   if (st.screen !== 'game' || st.paused || st.halted) return;
   clock += dt;
@@ -4318,8 +4374,8 @@ if (st.look) { const i = LEVELS.findIndex(L => L.name === st.look); if (i >= 0) 
 const prepared = platform.init().then(() => {
   // язык спрашиваем при каждом запуске (Яндекс 2.14), даже пока он один
   html.lang = st.lang = pickLang(platform.lang());
-  return st.look ? null : platform.load();
-}).then(d => { if (d && d.stars) st.stars = d.stars; }).catch(() => {});
+  return Promise.all([st.look ? null : platform.load(), platform.flags(AD_FLAGS).then(applyAdFlags)]);
+}).then(([d]) => { if (d && d.stars) st.stars = d.stars; }).catch(() => {});
 platform.onSynced(d => {
   if (st.look) return;
   st.stars = mergeSaves({ stars: st.stars }, d).stars;
