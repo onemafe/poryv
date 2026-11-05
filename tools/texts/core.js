@@ -133,10 +133,7 @@ function applyEdits(src, edits) {
       if (same(L[k], E[k].now)) { delete E[k]; continue; } // в игре уже ровно это — правка сделана раньше
       if (!same(L[k], E[k].was)) { conflicts.push(`${id} · ${k}: в игре текст поменялся после правки`); continue; }
       src = setField(src, levelObjects(src).find(o => o.name === name).at, k, E[k].now);
-      if (k === 'name') { // звёзды и PAR — по названию
-        src = src.replace(/const PAR = {[^}]*}/, p => p.replace(q(name) + ':', q(E.name.now) + ':'));
-        name = renamed[id] = E.name.now;
-      }
+      if (k === 'name') name = renamed[id] = E.name.now; // правки и тексты «в начале» — по названию; звёзды и PAR — по постоянному id уровня
       const n = name;
       expect.push([E[k].now, a => a.levels.find(l => l.id === n)?.[k], `${id} · ${k}`]);
       applied.push(`${id} · ${k}`);

@@ -5,6 +5,6 @@ const { loadSim, fieldMap } = require('./sim');
 const [name, file, extra] = process.argv.slice(2);
 const sim = loadSim(), list = file && file !== '-' ? require(path.resolve(file)) : sim.LEVELS, L = list.find(l => l.name === name);
 const placed = extra ? JSON.parse(extra) : [];
-const f = fieldMap(sim, L, placed, { gatePlan: L.gatePlan });
+const f = fieldMap(sim, L, placed);
 console.log(`${L.name}: ${f.ok ? 'устояло' : 'НЕ устояло: ' + f.fails.join('; ')}, запас ${Math.round(f.worst * 100)}%`);
 console.log(f.text);

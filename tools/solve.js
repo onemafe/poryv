@@ -26,7 +26,7 @@ if (isMainThread) {
     for (let rot = 0; rot < 4; rot++) for (let y = 0; y < 10; y++) for (let x = 0; x < 10; x++) {
       const pc = { type: t, x, y, rot };
       if (!sim.canPlace(w, pc) || !inNear(pc)) continue;
-      const k = key(pc); if (seen.has(k) && sim.TYPES[t].kind !== 'wedge') continue; seen.add(k); out.push(pc);
+      const k = key(pc); if (seen.has(k)) continue; seen.add(k); out.push(pc);
     }
     return out;
   };
@@ -71,7 +71,7 @@ if (isMainThread) {
 } else {
   const sim = loadSim(), L = getLevel(sim, workerData.name, workerData.file);
   parentPort.postMessage(workerData.combos.map(pcs => {
-    const r = run(sim, L, pcs, { stopOnBreak: true, gatePlan: L.gatePlan });
+    const r = run(sim, L, pcs, { stopOnBreak: true });
     return { pcs, ok: r.ok, worst: r.ok ? r.worst : 9 };
   }));
 }

@@ -23,11 +23,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Игра — один файл, сборка не нужна
+      # Игра — страница и шрифты рядом с ней, сборка не нужна
       - name: Prepare site
         run: |
           mkdir -p _site
           cp "Порыв.html" _site/index.html
+          cp -r fonts _site/fonts
           touch _site/.nojekyll
 
       - uses: actions/configure-pages@v5

@@ -9,7 +9,7 @@ const { loadSim, run } = require('./sim');
 
 const levelsOf = (sim, file) => (file ? require(path.resolve(file)) : sim.LEVELS);
 function ok(sim, L, placed) {
-  return run(sim, L, placed, { stopOnBreak: true, gatePlan: L.gatePlan, cuts: L.solutionCuts || [] }).ok;
+  return run(sim, L, placed, { stopOnBreak: true, cuts: L.solutionCuts || [] }).ok;
 }
 
 if (isMainThread) {

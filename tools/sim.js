@@ -8,7 +8,7 @@ function loadSim() {
   return new Function(script + ';return { createWorld, applyLevel, beginRun, runStep, evaluate, rebuild, canPlace, pieceCells, worstLoad, starsFor, speedAtCell, cellMean, TYPES, PAR, LEVELS, BOARD };')();
 }
 
-// прогон: placed — фигуры игрока; опции: durMul, gatePlan, stopOnBreak, peaks — скорость по клеткам (максимум за прогон)
+// прогон: placed — фигуры игрока; опции: durMul, stopOnBreak, peaks — скорость по клеткам (максимум за прогон)
 function run(sim, L, placed, o = {}) {
   const w = sim.createWorld();
   sim.applyLevel(w, L);
@@ -21,10 +21,6 @@ function run(sim, L, placed, o = {}) {
   const peak = o.peaks ? new Float32Array(sim.BOARD * sim.BOARD) : null;
   let broke = false;
   while (w.running) {
-    if (o.gatePlan) for (const g of w.pieces) if (g.type === 'gate' && !g.jammed) {
-      const shut = o.gatePlan.some(([a, b]) => w.t >= a && w.t < b);
-      if (g.open === shut) { g.open = !shut; sim.rebuild(w); }
-    }
     const b = sim.runStep(w, 1 / 60);
     if (b && b.length) { broke = true; if (o.stopOnBreak) return { ok: false, w }; }
     if (peak && w.t > 1.5) for (let y = 0; y < sim.BOARD; y++) for (let x = 0; x < sim.BOARD; x++) {
@@ -36,7 +32,7 @@ function run(sim, L, placed, o = {}) {
 }
 
 // карта: буквы построек и скорость ветра в клетках (м/с, максимум за прогон после разгона)
-const LETTER = { stack: 's', wall: '#', kiosk: 'k', hut: 'h', house: 'H', corner: 'L', tower: 'T', slab: 'S', fence: 'f', tree: 't', mill: 'm', rock: 'r', arch: 'A', rotunda: 'O', wedge: 'W', chimney: 'C', tent: 'p', gate: 'g', wattle: 'w' };
+const LETTER = { stack: 's', wall: '#', kiosk: 'k', hut: 'h', house: 'H', corner: 'L', slab: 'S', fence: 'f', tree: 't', mill: 'm', rock: 'r', arch: 'A', chimney: 'C', wattle: 'w' };
 function fieldMap(sim, L, placed, o = {}) {
   const r = run(sim, L, placed, { ...o, peaks: true });
   const occ = new Map();

@@ -149,7 +149,7 @@ textarea:focus, select:focus, input:focus { outline: 2px solid var(--accent); ou
 
 <script>
 const FIELDS = [
-  ['name', 'Название', 'по нему хранятся звёзды'],
+  ['name', 'Название', 'звёзды хранятся по постоянному id: менять можно'],
   ['hint', 'Подсказка', 'полоса сверху'],
   ['intro', 'Диалог перед уровнем', 'первая реплика — и на карте'],
   ['outro', 'После победы', 'в игре видна последняя реплика'],
@@ -281,7 +281,6 @@ function textEditor(set, id, k, cur, orig, row) {
     const changed = !!editOf(set, id, k);
     row.classList.toggle('changed', changed);
     if (k === 'hint') under.append(el('span', { class: t.value.length > LONG_HINT ? 'long' : '' }, `${t.value.length} симв.` + (t.value.length > LONG_HINT ? ' — на телефоне не влезет в полосу целиком' : '')));
-    if (k === 'name' && changed) under.append(el('span', { class: 'warn-txt' }, 'Новое название: у тех, кто уже прошёл уровень, звёзды за него пропадут. PAR перепишется сам.'));
     if ((k === 'name' || k === 'hint') && !t.value.trim()) under.append(el('span', { class: 'warn-txt' }, 'Пустым быть не может.'));
     if (k === 'tip' && changed && !t.value.trim()) under.append(el('span', {}, 'Совет уберётся из уровня.'));
     if (set === 'lessons') {

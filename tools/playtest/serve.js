@@ -7,6 +7,7 @@ const path = require('path');
 
 const PORT = +process.env.PORT || 8790;
 const GAME = path.join(__dirname, '..', '..', 'Порыв.html');
+const FONTS = path.join(__dirname, '..', '..', 'fonts');
 
 // /phone?agent=<имя> — игра в рамке телефона 412×860: агент не может сузить развёрнутое окно Chrome,
 // а раскладка игры зависит от размера окна. window.agent рамки — это agent игры внутри.
@@ -19,6 +20,14 @@ iframe{width:412px;height:min(860px,calc(100vh - 20px));border:0;border-radius:1
 http.createServer((req, res) => {
   const [p, q = ''] = req.url.split('?');
   if (p === '/phone') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(PHONE(q ? '?' + q : '')); return; }
+  if (p.startsWith('/fonts/')) { // шрифты игры; имя без папок, выше fonts/ не выйти
+    fs.readFile(path.join(FONTS, path.basename(p)), (err, data) => {
+      if (err) { res.writeHead(404); res.end(); return; }
+      res.writeHead(200, { 'Content-Type': 'font/woff2' });
+      res.end(data);
+    });
+    return;
+  }
   if (p !== '/') { res.writeHead(404); res.end(); return; }
   // читаем при каждом запросе — правки уровней видны после перезагрузки страницы
   fs.readFile(GAME, (err, data) => {
