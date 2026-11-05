@@ -45,6 +45,12 @@ body, .load {
     linear-gradient(180deg, var(--g1) 0%, var(--g2) 50%, var(--g3) 100%);
 }
 body { color: var(--txt); font: 14px/1.35 var(--f-body); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+/* ПК: игровая зона не шире 2:1 (Яндекс 1.6.2.2), по бокам — небо. transform делает body рамкой для position: fixed.
+   Телефон лёжа бывает шире 2:1, его не трогаем: каждый пиксель на счету */
+@media (min-aspect-ratio: 2/1) and (hover: hover) and (pointer: fine) {
+  html { background-color: var(--g2); background-image: linear-gradient(180deg, var(--g1) 0%, var(--g2) 50%, var(--g3) 100%); }
+  body { position: fixed; top: 0; bottom: 0; left: calc(50vw - 100vh); width: 200vh; height: auto; transform: translateZ(0); }
+}
 #stage { position: fixed; inset: 0; }
 canvas#c { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 2px; }
@@ -247,7 +253,30 @@ button.glass { cursor: pointer; padding: 0; color: var(--txt); }
 .dragging .drag-icon.on-board { opacity: 0; }
 
 /* низкое окно (телефон горизонтально, VK на ПК): полоса в одну строку, журнал уже */
-[data-layout="short"] .hud { --jw: 300px; }
+[data-layout="short"] .hud { --jw: clamp(220px, 30vw, 300px); }
+/* низкое окно: реплика урока занимает панель, поэтому без подписи раздела и строки помощи, фигуры ниже */
+[data-layout="short"] .journal:has(.talk) .jhelp, [data-layout="short"] .jinv .jl { display: none; }
+[data-layout="short"] .journal:has(.talk) .piece { height: 54px; padding-bottom: 3px; }
+[data-layout="short"] .journal:has(.talk) .piece canvas { width: 28px; height: 24px; }
+[data-layout="short"] .talk, [data-layout="short"] .result { padding: 7px 9px; gap: 3px; font-size: 11.5px; line-height: 1.25; }
+[data-layout="short"] .line { grid-template-columns: 1fr; gap: 0; }
+[data-layout="short"] .line .ava, [data-layout="short"] .line .role { display: none; }
+[data-layout="short"] .result h2 { font-size: 14px; }
+[data-layout="short"] .result .btn { min-height: 38px; padding: 0 6px; font-size: 12px; }
+[data-layout="short"] .res-acts .i { display: none; }
+[data-layout="short"] .journal:has(.result) .jmeta { display: none; }
+[data-layout="short"] .result p { font-size: 11.5px; }
+[data-layout="short"] .skip { min-height: 26px; }
+/* песочница: фигур много, панель шире */
+html.in-sandbox[data-layout="short"] .hud { --jw: 330px; }
+html.in-sandbox[data-layout="short"] .inv[data-many] .piece { height: 54px; padding-bottom: 3px; }
+html.in-sandbox[data-layout="short"] .inv[data-many] .piece canvas { width: 28px; height: 24px; }
+html.in-sandbox[data-layout="short"] .inv[data-many] .piece .sp { display: none; }
+html.in-sandbox .jhelp { display: none; }
+/* песочница — не основной экран: на низком окне прокручивается её содержимое, а «Ветер!» всегда на месте */
+html.in-sandbox .journal { overflow: hidden; }
+html.in-sandbox .jinv { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+html.in-sandbox .jacts { flex: none; margin-top: 0; }
 [data-layout="short"] .topbar { flex-wrap: nowrap; align-items: center; padding: 5px 10px 5px 5px; border-radius: 20px; }
 [data-layout="short"] .mbtn { width: 38px; height: 38px; border-radius: 13px; }
 [data-layout="short"] .lvl { flex: none; display: flex; align-items: baseline; gap: 10px; }
@@ -262,7 +291,7 @@ button.glass { cursor: pointer; padding: 0; color: var(--txt); }
 [data-layout="short"] .f-hint svg { width: 24px; height: 24px; }
 [data-layout="short"] .fcircles { position: absolute; right: 0; top: calc(100% + 8px); }
 [data-layout="short"] .journal { gap: 8px; padding: 10px 12px; }
-[data-layout="short"] .inv { gap: 6px; }
+[data-layout="short"] .inv { gap: 6px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 [data-layout="short"] .piece { height: 66px; border-radius: 16px; padding-bottom: 6px; }
 [data-layout="short"] .piece canvas { width: 36px; height: 32px; margin-bottom: 1px; }
 [data-layout="short"] .piece .nm { font-size: 12px; }
@@ -277,8 +306,34 @@ button.glass { cursor: pointer; padding: 0; color: var(--txt); }
 [data-layout="portrait"] .jinv .jl { display: none; }
 [data-layout="portrait"] .inv { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 [data-layout="portrait"] .inv[data-many] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-[data-layout="portrait"] .jhelp { margin-top: 6px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+[data-layout="portrait"] .jhelp { margin-top: 6px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; min-height: 2lh; }
 [data-layout="portrait"] .jacts { margin-top: 0; }
+@media (max-width: 400px) { [data-layout="portrait"] .piece .nm { font-size: 11px; letter-spacing: -0.2px; } }
+/* маленький телефон: всё мельче, чтобы панель не прокручивалась (Яндекс 1.10.4), а поле не сжималось */
+@media (max-height: 800px) {
+  [data-layout="portrait"] .topbar { padding: 6px 10px 6px 6px; gap: 4px 10px; }
+  [data-layout="portrait"] .lvl b { font-size: 14px; }
+  [data-layout="portrait"] .legend { display: none; }
+  [data-layout="portrait"] .wind { width: auto; }
+  [data-layout="portrait"] .wind-n b { font-size: 20px; }
+  [data-layout="portrait"] .topbar .hint { padding-top: 4px; -webkit-line-clamp: 1; }
+  [data-layout="portrait"] .f-hint { width: 48px; height: 48px; }
+  [data-layout="portrait"] .f-hint svg { width: 24px; height: 24px; }
+  [data-layout="portrait"] .journal { gap: 6px; padding-top: 16px; }
+  [data-layout="portrait"] .piece { height: 62px; border-radius: 16px; padding-bottom: 5px; }
+  [data-layout="portrait"] .piece canvas { width: 34px; height: 30px; margin-bottom: 1px; }
+  [data-layout="portrait"] .piece .sp { font-size: 9px; }
+  [data-layout="portrait"] .talk, [data-layout="portrait"] .result { padding: 8px 10px; gap: 4px; font-size: 12px; line-height: 1.25; }
+  [data-layout="portrait"] .line { grid-template-columns: 28px 1fr; gap: 8px; }
+  [data-layout="portrait"] .line .ava { --s: 28px; }
+  [data-layout="portrait"] .line .role { display: none; }
+  [data-layout="portrait"] .result h2 { font-size: 15px; }
+  [data-layout="portrait"] .jhelp { margin-top: 2px; font-size: 11px; line-height: 1.25; }
+  [data-layout="portrait"] #go { min-height: 46px; }
+  html.in-sandbox[data-layout="portrait"] .inv[data-many] .piece { height: 54px; padding-bottom: 3px; }
+  html.in-sandbox[data-layout="portrait"] .inv[data-many] .piece canvas { width: 28px; height: 24px; }
+  html.in-sandbox[data-layout="portrait"] .inv[data-many] .piece .sp { display: none; }
+}
 
 /* @dev-start */
 /* тестовый стики-баннер (?banner): игра ужимается, как iframe на площадке; transform делает body рамкой для position: fixed */
@@ -1797,6 +1852,8 @@ function saveStars(i, n) {
   st.stars[k] = n;
   if (!st.look) platform.save({ stars: st.stars });
 }
+// качество: если устройство не тянет, сначала меньше струй, потом ниже чёткость. Только вниз, чтобы картинка не прыгала туда-сюда
+const quality = { level: 0, dpr: 2, t: 0, sum: 0, n: 0 };
 let view = { ox: 0, oy: 0, tw: 40, hz: 22, w: 0, h: 0, dpr: 1, free: null };
 let colors = {};
 const debris = [];
@@ -1809,6 +1866,7 @@ function readColors() {
     colors[k] = cs.getPropertyValue('--' + k).trim();
   // тёмная ли поверхность острова — от неё зависят тени граней и цвет струй
   colors.dark = hexToRgb(colors.ground).reduce((a, b) => a + b, 0) < 384;
+  colors.mono = cs.getPropertyValue('--f-mono'); colors.body = cs.getPropertyValue('--f-body');
 }
 function hexToRgb(h) { h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
 function shade(hex, f) { const [r, g, b] = hexToRgb(hex); return `rgb(${r * f | 0},${g * f | 0},${b * f | 0})`; }
@@ -1852,10 +1910,17 @@ function fitView() {
   }
   y0 -= 1.25; y1 += 0.2;
   cam.cos = Math.cos(cam.a); cam.sin = Math.sin(cam.a);
-  const f = view.free || { x: 0, y: 0, w: view.w, h: view.h };
-  const W = Math.max(120, f.w - 16), H = Math.max(140, f.h - 12);
-  let tw = Math.min(W / (x1 - x0), H / (y1 - y0)) * cam.zoom;
-  let ox = f.x + f.w / 2 - (x0 + x1) / 2 * tw + cam.px, oy = f.y + f.h / 2 - (y0 + y1) / 2 * tw + cam.py;
+  let f = view.free || { x: 0, y: 0, w: view.w, h: view.h };
+  const fit = g => Math.min(Math.max(120, g.w - 16) / (x1 - x0), Math.max(140, g.h - 12) / (y1 - y0));
+  // панель итога выше обычной: поле не двигаем и не уменьшаем, пока хватает места; не хватает — приподнимаем ровно насколько нужно
+  let lift = 0;
+  if (st.phase === 'result' && view.freeBase && view.freeBase !== f && view.freeBase.w === f.w && (y1 - y0) * fit(view.freeBase) <= f.h - 6) {
+    const b = view.freeBase, bottom = b.y + b.h / 2 + (y1 - y0) / 2 * fit(b);
+    lift = Math.max(0, bottom + 6 - (f.y + f.h));
+    f = b;
+  }
+  let tw = fit(f) * cam.zoom;
+  let ox = f.x + f.w / 2 - (x0 + x1) / 2 * tw + cam.px, oy = f.y + f.h / 2 - (y0 + y1) / 2 * tw + cam.py - lift;
   // пока несёшь фигуру — остров приближен вокруг точки st.fp, которая едет за фигурой
   if (st.fz > 1.001) { const z = st.fz; ox = st.fp[0] + (ox - st.fp[0]) * z; oy = st.fp[1] + (oy - st.fp[1]) * z; tw *= z; }
   view.tw = tw; view.hz = tw * 0.52; view.ox = ox; view.oy = oy;
@@ -1894,10 +1959,12 @@ function resize() {
   placeBanner(); // @dev
   detectLayout();
   const r = cv.getBoundingClientRect();
-  view.dpr = Math.min(2, window.devicePixelRatio || 1);
+  view.dpr = Math.min(quality.dpr, window.devicePixelRatio || 1);
   view.w = r.width; view.h = r.height;
   cv.width = Math.round(r.width * view.dpr); cv.height = Math.round(r.height * view.dpr);
+  underWin = 0;
   view.free = freeRect();
+  if (st.phase !== 'result') view.freeBase = view.free;
   if (st.screen === 'map') mapResize();
 }
 // зона поля: ниже верхней полосы и левее журнала (ПК) или выше него (телефон)
@@ -2067,7 +2134,7 @@ function updateUI() {
     b.setAttribute('aria-pressed', String(st.sel === t));
   }
   updateExtra();
-  $('#sandbox').hidden = !st.sandbox;
+  $('#sandbox').hidden = !st.sandbox; html.classList.toggle('in-sandbox', !!st.sandbox);
   // подсказка за рекламу и отмена
   const res = st.phase === 'result';
   $('#fcircles').hidden = res;
@@ -2119,7 +2186,7 @@ function renderResult() {
   const box = document.createElement('div'); box.className = 'result ' + r.kind;
   if (r.kind === 'lose') box.innerHTML = `<h2>${esc(r.title)}</h2><p class="why">${esc(r.list[0].toUpperCase() + r.list.slice(1))}</p>${r.tip ? `<p>${esc(r.tip)}</p>` : ''}
     <div class="res-acts"><button type="button" class="btn go" data-act="again">Ещё раз</button>
-      ${hintable() ? `<button type="button" class="btn" data-act="hint">${icon('bulb')} Подсказка: 1 фигура <span class="ad">реклама</span></button>` : ''}
+      ${hintable() ? `<button type="button" class="btn" data-act="hint">${icon('bulb')} Подсказка <span class="ad">реклама</span></button>` : ''}
       <button type="button" class="btn" data-act="tomap">${icon('map')} Карта</button></div>`;
   else box.innerHTML = `<h2>${r.kind === 'partial' ? 'Почти' : 'Устояло'}</h2><p>${esc(r.t)}</p>
     <div class="res-acts"><button type="button" class="btn go" data-act="again">Ещё раз</button><button type="button" class="btn" data-act="tomap">${icon('map')} Карта</button></div>`;
@@ -2289,7 +2356,7 @@ function dragTo(cx, cy) {
   }
   // над панелью за пальцем едет плоская иконка; над полем она гаснет — там уже объёмная фигура
   const ic = $('#dragIcon'); ic.classList.toggle('on-board', on);
-  ic.style.transform = `translate(${cx - 30}px, ${cy - (d.off ? 0 : d.lift) - 30}px)`;
+  ic.style.transform = `translate(${lx - 30}px, ${ly - (d.off ? 0 : d.lift) - 30}px)`;
 }
 function endDrag(cancel, cx, cy) {
   const d = st.drag, p = d.piece; st.drag = null;
@@ -2563,7 +2630,7 @@ function setPause(on) {
 // ---------- разметка и обработчики уровня ----------
 $('#chips').innerHTML = `<button type="button" class="c-rot cb sun" data-act="rot" aria-label="Повернуть фигуру" title="Повернуть (R)">${ICON_ROT}</button><button type="button" class="c-move cb white" data-grab aria-label="Перенести фигуру — зажми и тяни" title="Зажми и тяни">${ICON_MOVE}</button><button type="button" class="c-ok cb mint" data-act="ok" aria-label="Готово">${ICON_OK}</button>`;
 $('#trash').innerHTML = `${ICON_TRASH}<span>Убрать</span>`;
-$('#jmeta').innerHTML = '<div class="extra" id="extra" hidden></div><div class="tl" id="tl" hidden><div class="tl-bar"></div><div class="tl-cur"></div><div class="tl-lbl"><span>0 с</span><span>порывы и смена ветра</span></div></div>';
+$('#jmeta').innerHTML = '<div class="extra" id="extra" hidden></div><div class="tl" id="tl" hidden><div class="tl-bar"></div><div class="tl-cur"></div><div class="tl-lbl"><span>0 с</span><span>смена ветра</span></div></div>';
 document.addEventListener('pointerdown', onDown);
 addEventListener('pointermove', onMove);
 addEventListener('pointerup', onUp);
@@ -3158,7 +3225,7 @@ const boxOf = ci => { const [cx, cy] = mp.centers[ci]; return [cx - MA * 1.1 - 4
 // полоса моря между панелями: сверху — шапка (на обзоре) или карточка острова, снизу — «Играть» («Все острова» лежит поверх края);
 // на низком окне — правее колонки слева. Меряем при перестройке карты, не каждый кадр
 function mapBand() {
-  const short = html.dataset.layout === 'short', W = innerWidth, H = innerHeight;
+  const short = html.dataset.layout === 'short', W = vpW(), H = vpH();
   const head = $('#mapTop .mtop').getBoundingClientRect().bottom + 8, zc = $('#zcard').getBoundingClientRect(), cta = $('#mapBottom .cta').getBoundingClientRect();
   mp.band = short ? { W, top0: head, top1: head, bot: H - 8, x0: zc.right + 10 } : { W, top0: head, top1: zc.bottom + 8, bot: cta.top - 8, x0: 0 };
   const dots = mapOv.querySelector('.idots');
@@ -3444,7 +3511,8 @@ function loading(done, prepared) {
 }
 
 // ---------- частицы-струи ----------
-const NP = 520, TR = 9;
+const TR = 9;
+let NP = 520; // на слабом устройстве меньше (см. качество в цикле)
 const parts = [];
 function spawn(p, anywhere) {
   const s = world.sim;
@@ -3473,7 +3541,9 @@ function stepParticles(dt) {
 const simToBoard = (i) => i / SUB - MARGIN;
 
 // ---------- рисование ----------
-function drawBoard() {
+// плита острова с тенью и дороги: пока камера стоит, не меняются — рисуем один раз и дальше берём картинку (размытая тень дорогая)
+let boardCv = null, boardKey = '';
+function paintBoard() {
   const B = BOARD, d = 0.32 * view.tw / view.hz;
   ctx.save();
   ctx.shadowColor = 'rgba(30,50,75,0.28)'; ctx.shadowBlur = view.tw * 1.4; ctx.shadowOffsetY = view.tw * 0.7;
@@ -3488,21 +3558,46 @@ function drawBoard() {
     poly([P(x, y, 0), P(x + 1, y, 0), P(x + 1, y + 1, 0), P(x, y + 1, 0)], base);
   }
   drawRoads();
+}
+function drawBoard() {
+  if (cam.a !== cam.target || st.fz !== 1 || (st.drag && st.drag.kind === 'cam')) paintBoard(); // камера едет — картинка всё равно устарела бы
+  else {
+    const key = [cam.a, view.tw, view.ox, view.oy, cv.width, cv.height, colors.ground, colors.slab].join();
+    if (key !== boardKey || boardCv.roads !== world.roads) {
+      boardCv = boardCv || document.createElement('canvas');
+      boardCv.width = cv.width; boardCv.height = cv.height; boardCv.roads = world.roads; boardKey = key;
+      const g = boardCv.getContext('2d'); g.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      withCtx(g, paintBoard);
+    }
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(boardCv, 0, 0); ctx.restore();
+  }
   for (const [x, y] of st.stumps || []) {
     if (pieceAt(x, y)) continue;
     box(x + 0.32, y + 0.32, x + 0.68, y + 0.68, 0, 0.18, '#8a6a46', '#d8b98a');
     box(x + 0.42, y + 0.42, x + 0.58, y + 0.58, 0.18, 0.181, '#c9a77a', '#b08a5a'); // годовые кольца
   }
 }
+// поле ветра: по точке на подъячейку в маленькой картинке, на экран — одним растяжением по плоскости острова (вместо 900 заливок за кадр)
+let heatCv = null, heatImg = null;
+const HEAT_STEP = 4, HEAT_LUT = Array.from({ length: 41 * HEAT_STEP }, (_, i) => rampRGB(i / HEAT_STEP)); // цвет по м/с с шагом 0.25
 function drawHeat() {
-  const s = world.sim, S = SUB, n = BOARD * S, a = colors.dark ? 0.55 : 0.46;
-  for (let b = 0; b < n; b++) for (let i = 0; i < n; i++) {
-    const k = (b + MARGIN * S) * s.nx + i + MARGIN * S;
-    if (s.solid[k]) continue;
-    const ms = Math.hypot(s.u[k], s.v[k]) * world.windMs / s.W;
-    const x = i / S, y = b / S, e = 1 / S + 0.004;
-    poly([P(x, y, 0.004), P(x + e, y, 0.004), P(x + e, y + e, 0.004), P(x, y + e, 0.004)], rampCss(ms, a));
+  const s = world.sim, S = SUB, n = BOARD * S, a = Math.round((colors.dark ? 0.55 : 0.46) * 255), k = world.windMs / s.W * HEAT_STEP;
+  if (!heatCv) { heatCv = document.createElement('canvas'); heatCv.width = heatCv.height = n; heatCv.g = heatCv.getContext('2d'); heatImg = heatCv.g.createImageData(n, n); }
+  const d = heatImg.data;
+  let q = 0;
+  for (let b = 0; b < n; b++) for (let i = 0; i < n; i++, q += 4) {
+    const m = (b + MARGIN * S) * s.nx + i + MARGIN * S;
+    if (s.solid[m]) { d[q + 3] = 0; continue; }
+    const c = HEAT_LUT[Math.min(HEAT_LUT.length - 1, Math.hypot(s.u[m], s.v[m]) * k | 0)];
+    d[q] = c[0]; d[q + 1] = c[1]; d[q + 2] = c[2]; d[q + 3] = a;
   }
+  heatCv.g.putImageData(heatImg, 0, 0);
+  const o = P(0, 0, 0.004), ex = P(1, 0, 0.004), ey = P(0, 1, 0.004);
+  ctx.save();
+  ctx.transform(ex[0] - o[0], ex[1] - o[1], ey[0] - o[0], ey[1] - o[1], o[0], o[1]);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(heatCv, 0, 0, BOARD, BOARD);
+  ctx.restore();
 }
 // снег на земле
 function drawScalar() {
@@ -3526,8 +3621,30 @@ function drawGrid() {
   ctx.stroke();
 }
 function inBoard(x, y, m = 0.2) { return x > -m && y > -m && x < BOARD + m && y < BOARD + m; }
+// струи: сегменты с близкой прозрачностью рисуем одним контуром (вместо полутора тысяч stroke за кадр)
+const STREAK_LEVELS = 5;
 function drawStreaks() {
   ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1, view.tw / 30);
+  if (!world.mods.drift && !st.layers.heat) { drawStreaksBySpeed(); return; }
+  const rgb = world.mods.drift ? '255,255,255' : colors.dark ? '240,246,250' : '20,30,40', top = world.mods.drift ? 1 : colors.dark ? 0.95 : 0.75;
+  const o = P(0, 0, 0.06), e = P(1, 0, 0.06), f = P(0, 1, 0.06), ax = e[0] - o[0], ay = e[1] - o[1], bx = f[0] - o[0], by = f[1] - o[1];
+  const paths = Array.from({ length: STREAK_LEVELS }, () => new Path2D());
+  for (const p of parts) {
+    const tr = p.tr; if (tr.length < 6) continue;
+    const fade = Math.min(1, p.age / 0.4, (p.life - p.age) / 0.6);
+    if (fade <= 0) continue;
+    for (let i = 3; i < tr.length; i += 3) {
+      const x0 = simToBoard(tr[i - 3]), y0 = simToBoard(tr[i - 2]), x1 = simToBoard(tr[i]), y1 = simToBoard(tr[i + 1]);
+      if (!inBoard(x1, y1)) continue;
+      const path = paths[Math.min(STREAK_LEVELS - 1, fade * (i / tr.length) * STREAK_LEVELS | 0)];
+      path.moveTo(o[0] + ax * x0 + bx * y0, o[1] + ay * x0 + by * y0);
+      path.lineTo(o[0] + ax * x1 + bx * y1, o[1] + ay * x1 + by * y1);
+    }
+  }
+  paths.forEach((path, lv) => { ctx.strokeStyle = `rgba(${rgb},${(lv + 0.5) / STREAK_LEVELS * top})`; ctx.stroke(path); });
+}
+// слой «Поле скоростей» выключен в паузе: струя сама показывает скорость цветом
+function drawStreaksBySpeed() {
   const k = world.windMs / world.sim.W;
   for (const p of parts) {
     const tr = p.tr; if (tr.length < 6) continue;
@@ -3537,7 +3654,7 @@ function drawStreaks() {
       if (!inBoard(x1, y1)) continue;
       const a = P(x0, y0, 0.06), b = P(x1, y1, 0.06);
       const al = fade * (i / tr.length);
-      ctx.strokeStyle = world.mods.drift ? `rgba(255,255,255,${al * 0.95})` : st.layers.heat ? (colors.dark ? `rgba(240,246,250,${al * 0.75})` : `rgba(20,30,40,${al * 0.55})`) : rampCss(tr[i + 2] * k, al * 0.95);
+      ctx.strokeStyle = rampCss(tr[i + 2] * k, al * 0.95);
       ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
     }
   }
@@ -3579,7 +3696,7 @@ function drawInflow(time, d, color, alpha, label) {
     const e = -1.45, [lx, ly] = d[0] > 0 ? [e, n / 2] : d[0] < 0 ? [n - e, n / 2] : d[1] > 0 ? [n / 2, e] : [n / 2, n - e];
     const [sx, sy] = P(lx, ly, 0);
     ctx.globalAlpha = Math.max(0.5, alpha);
-    ctx.font = `600 11px ${getComputedStyle(document.body).getPropertyValue('--f-body')}`; ctx.textAlign = 'center';
+    ctx.font = `600 11px ${colors.body}`; ctx.textAlign = 'center';
     const w = ctx.measureText(label).width + 12;
     ctx.fillStyle = color; ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(sx - w / 2, sy - 9, w, 18, 9); else ctx.rect(sx - w / 2, sy - 9, w, 18); // старый Safari
@@ -3929,7 +4046,7 @@ function drawPieces(time) {
 }
 // подписи режимов над постройками: энергия ветряков
 function drawLabels() {
-  const mono = getComputedStyle(document.body).getPropertyValue('--f-mono');
+  const mono = colors.mono;
   ctx.font = `600 11px ${mono}`; ctx.textAlign = 'center';
   const tag = (x, y, z, txt, bg, fg) => {
     const [sx, sy] = P(x, y, z);
@@ -3961,7 +4078,7 @@ function drawLabels() {
 }
 // цели режимов прямо на поле: запас ворот над шлюзом и энергия ветряков сверху
 function drawGoals() {
-  const mono = getComputedStyle(document.body).getPropertyValue('--f-mono'), build = st.phase === 'build';
+  const mono = colors.mono, build = st.phase === 'build';
   const panel = (sx, sy, w, title, frac, col) => {
     ctx.fillStyle = 'rgba(12,21,34,.84)'; ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(sx - w / 2, sy, w, 38, 8); else ctx.rect(sx - w / 2, sy, w, 38);
@@ -3987,7 +4104,7 @@ function drawGoals() {
 function drawBars() {
   const build = st.phase === 'build';
   if (build && (!st.preview || !st.showLoads)) return;
-  const mono = getComputedStyle(document.body).getPropertyValue('--f-mono');
+  const mono = colors.mono;
   for (const pc of world.pieces) {
     const T = TYPES[pc.type];
     if ((pc.broken && !isFrozen(pc)) || !T.limit || solidFixed(pc)) continue;
@@ -4123,6 +4240,19 @@ function drawPerf() {
 // @dev-end
 // «игра идёт» для площадки; повторы отсекает сама площадка
 const syncGameplay = () => platform.gameplay(st.screen === 'game' && !st.paused && !st.halted && !winKind && !document.hidden);
+function qualityTick(raw) {
+  if (st.agent) return; // @dev
+  if (raw > 0.25 || quality.level >= 3) return; // рывок или скрытая вкладка — не показатель
+  quality.t += raw; quality.sum += raw; quality.n++;
+  if (quality.t < 2) return;
+  const avg = quality.sum / quality.n;
+  quality.t = quality.sum = quality.n = 0;
+  if (avg < 0.036) return; // держит больше ~28 к/с. Экономия заряда на телефоне даёт 30 — это не повод портить картинку
+  quality.level++;
+  if (quality.level === 1) { NP = 260; parts.length = Math.min(parts.length, NP); }
+  else { quality.dpr = quality.level === 2 ? 1.5 : 1; resize(); }
+}
+let underWin = 0, goProgress = false; // кадров, нарисованных под окном; полоса прогона на кнопке
 function frame(now) {
   requestAnimationFrame(frame);
   const raw = (now - last) / 1000, dt = Math.min(1 / 15, raw); last = now;
@@ -4146,9 +4276,11 @@ function frame(now) {
     if (!simTick(STEP)) break;
   }
   if (acc > STEP * 4) acc = 0;
+  // под окном итога и реплик поле не перерисовываем: ветер считается дальше, а размытый фон стоит и ничего не стоит
+  if (winKind) { if (++underWin > 2) return; } else { underWin = 0; if (st.phase !== 'result') qualityTick(raw); }
   if (st.dev) perf.steps += n; // @dev
   const flowOn = st.phase !== 'build' || st.preview;
-  if (!(st.drag && st.drag.kind === 'cam')) cam.a += (cam.target - cam.a) * Math.min(1, dt * 9);
+  if (!(st.drag && st.drag.kind === 'cam')) { cam.a += (cam.target - cam.a) * Math.min(1, dt * 9); if (Math.abs(cam.target - cam.a) < 1e-4) cam.a = cam.target; }
   focusZoom(dt);
   fitView();
   // приближение при переносе сдвигает поле — фигура должна остаться под пальцем
@@ -4189,10 +4321,10 @@ function frame(now) {
   }
   if (st.phase === 'run' && world.target) updateExtra();
   if (st.phase === 'run') {
-    ctx.fillStyle = colors.ink; ctx.textAlign = 'center'; ctx.font = `500 15px ${getComputedStyle(document.body).getPropertyValue('--f-mono')}`;
+    ctx.fillStyle = colors.ink; ctx.textAlign = 'center'; ctx.font = `500 15px ${colors.mono}`;
     ctx.fillText(`${Math.max(0, world.duration - world.t).toFixed(1)} с`, view.free.x + view.free.w / 2, view.free.y + 22);
-    $('#go').style.setProperty('--p', Math.min(1, world.t / world.duration).toFixed(3));
-  } else $('#go').style.setProperty('--p', 0);
+    goProgress = true; $('#go').style.setProperty('--p', Math.min(1, world.t / world.duration).toFixed(3));
+  } else if (goProgress) { goProgress = false; $('#go').style.setProperty('--p', 0); }
   // стрелка ветра в полосе — куда дует на экране при текущем повороте острова
   const a = P(5, 5, 0), b = P(5 + world.dir[0], 5 + world.dir[1], 0), deg = Math.round(Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI);
   if (deg !== windDeg) { windDeg = deg; $('#windArrow').style.transform = `rotate(${deg}deg)`; }
@@ -4351,7 +4483,7 @@ if (st.agent) {
 // @dev-end
 // ---------- старт ----------
 if (st.dev) document.body.classList.add('dev'); // @dev
-function refreshTheme() { readColors(); if (st.screen === 'game') { buildInv(); updateUI(); } }
+function refreshTheme() { readColors(); underWin = 0; if (st.screen === 'game') { buildInv(); updateUI(); } }
 readColors();
 buildChapters();
 const ro = new ResizeObserver(() => resize());
