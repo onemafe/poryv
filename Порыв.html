@@ -48,8 +48,9 @@ body { color: var(--txt); font: 14px/1.35 var(--f-body); -webkit-user-select: no
 /* ПК: игровая зона не шире 2:1 (Яндекс 1.6.2.2), по бокам — небо. transform делает body рамкой для position: fixed.
    Телефон лёжа бывает шире 2:1, его не трогаем: каждый пиксель на счету */
 @media (min-aspect-ratio: 2/1) and (hover: hover) and (pointer: fine) {
-  html { background-color: var(--g2); background-image: linear-gradient(180deg, var(--g1) 0%, var(--g2) 50%, var(--g3) 100%); }
-  body { position: fixed; top: 0; bottom: 0; left: calc(50vw - 100vh); width: 200vh; height: auto; transform: translateZ(0); }
+  html { background-color: var(--g2); background-image: radial-gradient(60% 24% at 16% 30%, var(--b1) 0, transparent 70%), radial-gradient(52% 24% at 94% 62%, var(--b2) 0, transparent 70%),
+    linear-gradient(180deg, var(--g1) 0%, var(--g2) 50%, var(--g3) 100%); }
+  body { background: none; position: fixed; top: 0; bottom: 0; left: calc(50vw - 100vh); width: 200vh; height: auto; transform: translateZ(0); }
 }
 #stage { position: fixed; inset: 0; }
 canvas#c { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
@@ -159,7 +160,7 @@ button.glass { cursor: pointer; padding: 0; color: var(--txt); }
 .f-cap { display: grid; justify-items: center; line-height: 1.2; padding: 3px 8px 4px; font: 700 11px var(--f-body); border-radius: 10px; color: var(--txt); }
 .f-cap .ad { font: 500 9px var(--f-mono); opacity: 0.75; }
 
-/* журнал: фигуры и «Ветер!» — стеклом справа на ПК, шторкой снизу на телефоне */
+/* журнал: фигуры и «Ветер!» — колонкой слева на ПК (стили в конце, data-layout="wide"), шторкой снизу на телефоне */
 .journal { position: absolute; top: var(--pad-t); right: var(--pad-r); bottom: var(--pad-b); width: var(--jw); display: flex; flex-direction: column; gap: 12px;
   pointer-events: auto; overflow: auto; padding: 16px 14px 14px; border-radius: 26px; }
 .jl { display: flex; align-items: center; gap: 8px; font: 500 10px var(--f-mono); color: var(--txt2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
@@ -334,6 +335,93 @@ html.in-sandbox .jacts { flex: none; margin-top: 0; }
   html.in-sandbox[data-layout="portrait"] .inv[data-many] .piece canvas { width: 28px; height: 24px; }
   html.in-sandbox[data-layout="portrait"] .inv[data-many] .piece .sp { display: none; }
 }
+
+/* ПК: всё в левой колонке, поле — на всю высоту справа от неё; полоса и кнопки переезжают в журнал (placeHud).
+   Размеры — по высоте игры (data-room). Телефонные макеты эти правила не задевают */
+[data-layout="wide"] .hud { --jw: clamp(280px, 30vw, 400px); }
+[data-layout="wide"] .journal { left: var(--pad-l); right: auto; }
+[data-layout="wide"] .topbar { background: none; border: 0; box-shadow: none; padding: 0; }
+[data-layout="wide"] .topbar .hint { display: block; text-align: center; cursor: default; }
+[data-layout="wide"] .fcircles { justify-self: auto; align-items: center; gap: 10px; }
+[data-layout="wide"] .f-undo { margin-top: 0; }
+[data-layout="wide"] .hintwrap { position: relative; flex: 1; display: flex; min-width: 0; }
+[data-layout="wide"] .f-hint { width: 100%; height: 44px; border-radius: 16px; justify-items: start; padding-left: 14px; }
+[data-layout="wide"] .f-hint svg { width: 22px; height: 22px; }
+[data-layout="wide"] .f-cap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 8px 0 36px; background: none; border: 0; box-shadow: none; color: #4a2c00; font-size: 13px; pointer-events: none; }
+[data-layout="wide"] #hintBtn:disabled + .f-cap { opacity: 0.5; }
+/* реплика и фигуры — посередине колонки, между шапкой и «Ветер!» */
+[data-layout="wide"] #talkSlot { margin-top: auto; }
+[data-layout="wide"] #resultSlot { margin-bottom: auto; }
+[data-layout="wide"] #resultSlot:empty { display: none; }
+[data-layout="wide"] .jacts { margin-top: auto; }
+[data-layout="wide"] .talk { border: 2px solid var(--accent); border-radius: 22px; text-align: center; }
+[data-layout="wide"] .talk.win { border-color: var(--ok); }
+[data-layout="wide"] .line { display: block; }
+[data-layout="wide"] .line .ava { margin: 0 auto 6px; }
+[data-layout="wide"] .acts { justify-content: center; }
+[data-layout="wide"] .jl { justify-content: center; }
+[data-layout="wide"] .jl::after { display: none; }
+[data-layout="wide"] .inv:not([data-many]) { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+[data-layout="wide"] .inv:not([data-many]) .piece { flex: 0 1 calc((100% - 16px) / 3); }
+[data-layout="wide"] .jhelp { text-align: center; }
+/* высокая игра: 720 px и больше */
+[data-layout="wide"][data-room="tall"] .journal { gap: 14px; padding: 16px; }
+[data-layout="wide"][data-room="tall"] .lvl b { font-size: 20px; }
+[data-layout="wide"][data-room="tall"] .wind-n b { font-size: 28px; }
+[data-layout="wide"][data-room="tall"] .topbar .hint { font-size: 14px; }
+[data-layout="wide"][data-room="tall"] .talk { padding: 14px 16px; gap: 8px; }
+[data-layout="wide"][data-room="tall"] .line .ava { --s: 56px; }
+[data-layout="wide"][data-room="tall"] .line .who { font-size: 15px; }
+[data-layout="wide"][data-room="tall"] .line p { margin-top: 4px; font-size: 17px; line-height: 1.35; }
+[data-layout="wide"][data-room="tall"] .inv:not([data-many]) .piece { height: 116px; border-radius: 22px; padding-bottom: 10px; }
+[data-layout="wide"][data-room="tall"] .inv:not([data-many]) .piece canvas { width: 76px; height: 69px; margin-bottom: 0; }
+[data-layout="wide"][data-room="tall"] .inv:not([data-many]) .piece .nm { font-size: 15px; }
+[data-layout="wide"][data-room="tall"] .inv:not([data-many]) .piece .sp { font-size: 10.5px; }
+[data-layout="wide"][data-room="tall"] .jhelp { font-size: 13px; }
+[data-layout="wide"][data-room="tall"] .result h2 { font-size: 22px; }
+[data-layout="wide"][data-room="tall"] .result p { font-size: 15px; }
+[data-layout="wide"][data-room="tall"] #go { min-height: 68px; border-radius: 22px; }
+[data-layout="wide"][data-room="tall"] #go .lbl { font-size: 24px; }
+/* средняя: 600–719 px */
+[data-layout="wide"][data-room="mid"] .journal { gap: 10px; padding: 12px; }
+[data-layout="wide"][data-room="mid"] .topbar .hint { font-size: 13px; }
+[data-layout="wide"][data-room="mid"] .talk { padding: 10px 12px; gap: 6px; }
+[data-layout="wide"][data-room="mid"] .line .ava { --s: 44px; margin-bottom: 4px; }
+[data-layout="wide"][data-room="mid"] .line p { font-size: 15px; line-height: 1.3; }
+[data-layout="wide"][data-room="mid"] .inv:not([data-many]) .piece { height: 92px; }
+[data-layout="wide"][data-room="mid"] .inv:not([data-many]) .piece canvas { width: 48px; height: 44px; }
+[data-layout="wide"][data-room="mid"] .inv:not([data-many]) .piece .nm { font-size: 14px; }
+[data-layout="wide"][data-room="mid"] .jhelp { margin-top: 6px; }
+/* низкая (ноутбук с полосой площадки): портрет в строку с именем, всё плотнее */
+[data-layout="wide"][data-room="low"] .journal { gap: 6px; padding: 9px 12px; }
+[data-layout="wide"][data-room="low"] .topbar { gap: 5px 10px; }
+[data-layout="wide"][data-room="low"] .mbtn { width: 40px; height: 40px; }
+[data-layout="wide"][data-room="low"] .lvl b { font-size: 15px; }
+[data-layout="wide"][data-room="low"] .wind { width: 88px; gap: 4px; }
+[data-layout="wide"][data-room="low"] .wind-n b { font-size: 21px; }
+[data-layout="wide"][data-room="low"] .legend .ticks { display: none; }
+[data-layout="wide"][data-room="low"] .legend .bar { margin: 0; }
+[data-layout="wide"][data-room="low"] .topbar .hint { padding-top: 4px; font-size: 12px; line-height: 1.25; }
+[data-layout="wide"][data-room="low"] .fbtn { width: 40px; height: 40px; }
+[data-layout="wide"][data-room="low"] .f-hint { width: 100%; }
+[data-layout="wide"][data-room="low"] .f-cap { font-size: 12px; }
+[data-layout="wide"][data-room="low"] .talk { padding: 7px 10px; gap: 3px; border-radius: 16px; font-size: 13px; line-height: 1.25; }
+[data-layout="wide"][data-room="low"] .line > div { display: inline; }
+[data-layout="wide"][data-room="low"] .line .ava { --s: 30px; display: inline-block; vertical-align: middle; margin: 0 7px 0 0; }
+[data-layout="wide"][data-room="low"] .line .role { display: none; }
+[data-layout="wide"][data-room="low"] .line p { margin-top: 2px; }
+[data-layout="wide"][data-room="low"] .skip { min-height: 24px; }
+[data-layout="wide"][data-room="low"] .jl { display: none; }
+[data-layout="wide"][data-room="low"] .inv:not([data-many]) .piece { height: 72px; border-radius: 16px; padding-bottom: 5px; }
+[data-layout="wide"][data-room="low"] .inv:not([data-many]) .piece canvas { width: 36px; height: 32px; margin-bottom: 1px; }
+[data-layout="wide"][data-room="low"] .inv:not([data-many]) .piece .sp { font-size: 9px; }
+[data-layout="wide"][data-room="low"] .jhelp { margin-top: 4px; font-size: 11px; line-height: 1.25; }
+[data-layout="wide"][data-room="low"] .journal:has(.talk) .jhelp { display: none; }
+[data-layout="wide"][data-room="low"] .result { padding: 8px 10px; gap: 6px; }
+[data-layout="wide"][data-room="low"] .result h2 { font-size: 15px; }
+[data-layout="wide"][data-room="low"] .result p { font-size: 12px; line-height: 1.25; }
+[data-layout="wide"][data-room="low"] .result .btn { min-height: 36px; }
+[data-layout="wide"][data-room="low"] #go { min-height: 46px; border-radius: 16px; }
 
 /* @dev-start */
 /* тестовый стики-баннер (?banner): игра ужимается, как iframe на площадке; transform делает body рамкой для position: fixed */
@@ -572,7 +660,7 @@ html.in-sandbox .jacts { flex: none; margin-top: 0; }
       <p class="hint" id="hint"></p>
     </div>
     <div class="fcircles" id="fcircles">
-      <button class="fbtn f-undo cb grey" type="button" id="undoBtn" aria-label="Отменить" title="Отменить (Alt+Z)" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L5 11l4 4M5 11h9a5 5 0 0 1 0 10h-2"/></svg></button>
+      <button class="fbtn f-undo cb grey" type="button" id="undoBtn" aria-label="Отменить" title="Отменить" disabled><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7L5 11l4 4M5 11h9a5 5 0 0 1 0 10h-2"/></svg></button>
       <div class="hintwrap" id="hintWrap">
         <button class="fbtn f-hint cb sun" type="button" id="hintBtn" aria-label="Подсказка за рекламу: одна фигура встанет на своё место"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M9 17h6M10 20.5h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg></button>
         <span class="f-cap glass" aria-hidden="true">Подсказка<span class="ad">▶ реклама: 1 фигура</span></span>
@@ -1937,9 +2025,26 @@ function poly(pts, fill, stroke) {
 // размер игры — по body: с тестовым баннером он меньше окна, как iframe на площадке
 const vpW = () => document.body.clientWidth || innerWidth, vpH = () => document.body.clientHeight || innerHeight;
 function detectLayout() {
-  const w = vpW(), h = vpH();
-  html.dataset.layout = w > h && h < 520 ? 'short' : w < 600 || w / h < 0.85 ? 'portrait' : 'wide';
-  html.dataset.input = matchMedia('(pointer: coarse)').matches ? 'touch' : 'mouse';
+  const w = vpW(), h = vpH(), touch = matchMedia('(pointer: coarse)').matches;
+  // низкое окно с мышью и шириной от 900 px — ноутбук с полосой площадки, а не телефон лёжа
+  html.dataset.layout = w > h && h < 520 && (touch || w < 900 || h < 480) ? 'short' : w < 600 || w / h < 0.85 ? 'portrait' : 'wide';
+  html.dataset.input = touch ? 'touch' : 'mouse';
+  placeHud(); fitColumn();
+}
+// на широком макете полоса и кнопки живут в журнале, на остальных — над полем
+function placeHud() {
+  const wide = html.dataset.layout === 'wide', host = wide ? $('#journal') : $('#ctop'), before = wide ? $('#talkSlot') : null;
+  for (const el of [$('#topbar'), $('#fcircles')]) if (el.parentElement !== host) host.insertBefore(el, before);
+}
+// размеры колонки ПК — по высоте игры; не влезла — на ступень мельче. Обратно только на новом уровне: размеры не скачут от реплики к реплике
+const ROOMS = ['tall', 'mid', 'low'];
+function fitColumn() {
+  if (html.dataset.layout !== 'wide') return;
+  const h = vpH(), j = $('#journal'), base = h >= 720 ? 0 : h >= 500 ? 1 : 2;
+  if (h !== view.roomH) { view.roomH = h; st.roomDown = 0; }
+  const put = () => { html.dataset.room = ROOMS[Math.min(2, base + (st.roomDown || 0))]; };
+  put();
+  while (j.scrollHeight > j.clientHeight && base + (st.roomDown || 0) < 2) { st.roomDown = (st.roomDown || 0) + 1; put(); }
 }
 // @dev-start
 // ?banner — заглушка стики-баннера Яндекса: посмотреть, как интерфейс живёт с отнятой полосой.
@@ -1967,7 +2072,7 @@ function resize() {
   if (st.phase !== 'result') view.freeBase = view.free;
   if (st.screen === 'map') mapResize();
 }
-// зона поля: ниже верхней полосы и левее журнала (ПК) или выше него (телефон)
+// зона поля: правее колонки на всю высоту (ПК); на остальных макетах — ниже верхней полосы и левее журнала или выше него
 function freeRect() {
   const W = view.w, H = view.h;
   if (st.screen !== 'game') return { x: 0, y: 0, w: W, h: H };
@@ -1981,7 +2086,7 @@ function freeRect() {
 // ---------- уровни ----------
 // brief — показать реплики жителей окном перед уровнем (при перезапуске не нужно)
 function loadLevel(i, brief = true) {
-  st.level = i;
+  st.level = i; st.roomDown = 0;
   st.sandbox = i >= LEVELS.length;
   st.logs = 0; st.stumps = [];
   if (!st.sandbox) {
@@ -2156,7 +2261,7 @@ function updateUI() {
   $('#chips .c-move').classList.toggle('pulse', fs === 'move' || cs === 'trash');
   $('#chips .c-ok').classList.toggle('pulse', fs === 'ok' && !!st.selected);
   $('#jhelp').textContent = helpText();
-  renderTalk(); renderResult();
+  renderTalk(); renderResult(); fitColumn();
   // настройки в паузе
   setTog('#lHeat', st.layers.heat); setTog('#lStreak', st.layers.streak); setTog('#lArrow', st.layers.arrow); setTog('#prev', st.preview);
   setTog('#vort', world.sim.vort > 0); setTog('#loads', !!st.showLoads); // @dev
@@ -2486,7 +2591,7 @@ function placeChips() {
   const pts = pieceCells(p).flatMap(([x, y]) => [P(x, y, 0), P(x + 1, y, 0), P(x + 1, y + 1, 0), P(x, y + 1, 0)]);
   const cx = (Math.min(...pts.map(q => q[0])) + Math.max(...pts.map(q => q[0]))) / 2, by = Math.max(...pts.map(q => q[1]));
   const w = ch.offsetWidth || 160, hgt = ch.offsetHeight || 46;
-  ch.style.left = Math.max(6, Math.min(view.w - w - 6, cx - w / 2)).toFixed(1) + 'px';
+  ch.style.left = Math.max((view.free ? view.free.x : 0) + 6, Math.min(view.w - w - 6, cx - w / 2)).toFixed(1) + 'px';
   ch.style.top = Math.max(6, Math.min(view.h - hgt - 6, by + 12)).toFixed(1) + 'px';
 }
 // корзина — в левом верхнем углу зоны поля: внизу её задевал палец, пока несёшь фигуру к журналу
@@ -2583,6 +2688,7 @@ function placeHint(L) {
   }
   rebuild(world);
   if (placeAt(next.type, next.x, next.y, next.rot)) {
+  if (html.dataset.layout === 'wide') { const x = j.right - cv.getBoundingClientRect().left + 8; return { x, y: 0, w: W - x, h: H }; }
     toast(`Подсказка: ${TYPES[next.type].name.toLowerCase()} — на своём месте.` + (moved ? ' Остальные фигуры вернулись в запас.' : ''));
     st.selected = null; st.selBad = false;
   }
@@ -2696,7 +2802,6 @@ addEventListener('keydown', e => {
   else if (k === 'KeyE') turnCam(1);
   else if (k === 'Delete' || k === 'Backspace') stashSel();
   else if (k === 'Enter' && st.selected) tryCommit();
-  else if (k === 'KeyZ' && (e.altKey || e.metaKey)) undo(); // Ctrl не берём: Яндекс запрещает сочетания с Ctrl
   else if (k === 'Space') {
     e.preventDefault();
     if (st.phase !== 'result') go();
@@ -4093,7 +4198,7 @@ function drawGoals() {
     let x = view.free.x + view.free.w / 2, y = view.free.y + (st.phase === 'run' ? 32 : 10);
     // не под кнопками отмены и подсказки: сдвинуть влево, а если места нет — опустить под них
     const fc = $('#fcircles').getBoundingClientRect(), cr = cv.getBoundingClientRect();
-    if (fc.width && y < fc.bottom - cr.top && x + W / 2 > fc.left - cr.left - 8) {
+    if (html.dataset.layout !== 'wide' && fc.width && y < fc.bottom - cr.top && x + W / 2 > fc.left - cr.left - 8) {
       x = fc.left - cr.left - 8 - W / 2;
       if (x - W / 2 < view.free.x + 8) { x = view.free.x + view.free.w / 2; y = fc.bottom - cr.top + 6; }
     }
