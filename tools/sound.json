@@ -1,0 +1,11 @@
+{
+  "key": 0,
+  "master": 0.8,
+  "duck": 0.65,
+  "room": 0.5,
+  "music": {"prog":0,"bpm":72,"swing":0.58,"warmth":6500,"tape":10,"vinyl":0.5,"drums":0.8,"bass":0.5,"keys":0.9,"melody":0.35,"reverb":1,"comp":0.65,"bars":8,"volume":0.9},
+  "tap": {"v":1,"volume":0.7,"pitch":0,"spread":1,"length":1,"reverb":0.16},
+  "chop": {"v":2,"volume":0.23,"pitch":0,"length":0.65,"reverb":0.02},
+  "win": {"v":0,"volume":0.3,"octave":0,"pace":1,"length":1,"reverb":0.4},
+  "fail": {"v":0,"volume":0.76,"octave":0,"length":1,"reverb":0.3}
+}

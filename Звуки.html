@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Порыв · звуки</title>
+<!-- Лаборатория звука: подбор на слух, в игру не входит. Открывается файлом в Chrome/Edge.
+     Движок между метками «движок звука» потом переедет в Порыв.html вместе с выбранными настройками. -->
+<style>
+@font-face { font-family: "Golos Text"; font-weight: 400 700; font-display: swap; src: url("fonts/golos-text-cyrillic.woff2") format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "Golos Text"; font-weight: 400 700; font-display: swap; src: url("fonts/golos-text-latin.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2212; }
+@font-face { font-family: "Unbounded"; font-weight: 500 700; font-display: swap; src: url("fonts/unbounded-cyrillic.woff2") format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "Unbounded"; font-weight: 500 700; font-display: swap; src: url("fonts/unbounded-latin.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2212; }
+:root {
+  --bg: #dfe7ee; --card: #fff; --line: rgba(30, 50, 75, 0.12); --txt: #1d2f3a; --txt2: rgba(29, 47, 58, 0.64);
+  --accent: #f7c21b; --accent-hi: #ffd23f; --accent-ink: #1c1600; --fill: rgba(30, 50, 75, 0.06); --fill2: rgba(30, 50, 75, 0.11);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--txt); font: 15px/1.45 "Golos Text", "Segoe UI", system-ui, sans-serif; }
+button, select, input, textarea { font: inherit; color: inherit; }
+h1, h2 { font-family: "Unbounded", "Arial Black", system-ui, sans-serif; font-weight: 600; margin: 0; }
+h1 { font-size: 17px; }
+h2 { font-size: 15px; }
+
+.bar { position: sticky; top: 0; z-index: 5; background: rgba(223, 231, 238, 0.95); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+.bar-in { max-width: 1180px; margin: 0 auto; padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.bar label { display: flex; gap: 6px; align-items: center; color: var(--txt2); font-size: 14px; white-space: nowrap; }
+.bar select { padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.keys { color: var(--txt2); font-size: 13px; margin-left: auto; }
+.keys kbd { font: 12px ui-monospace, monospace; background: #fff; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.card.wide { grid-column: 1 / -1; }
+.card header { display: flex; align-items: center; gap: 10px; }
+.card header h2 { flex: 1; }
+.note { margin: 0; color: var(--txt2); font-size: 14px; }
+.stats { margin: 0; font-size: 13px; color: var(--txt2); min-height: 1.4em; }
+
+.btn { padding: 7px 14px; border-radius: 10px; border: 1px solid var(--line); background: #fff; cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: rgba(30, 50, 75, 0.35); }
+.btn.main { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.main:hover { background: var(--accent-hi); }
+.btn.on { background: #1d2f3a; border-color: #1d2f3a; color: #fff; }
+
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--fill); cursor: pointer; font-size: 14px; }
+.seg button.sel { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+.sliders { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px 18px; }
+.sl { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; font-size: 14px; }
+.sl span { color: var(--txt2); }
+.sl b { font-weight: 500; font-variant-numeric: tabular-nums; }
+.sl input { grid-column: 1 / -1; width: 100%; accent-color: #1d2f3a; }
+
+.tbl { overflow-x: auto; }
+.loud { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.loud th, .loud td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.loud th { color: var(--txt2); font-weight: 500; font-size: 13px; }
+.loud .ok { color: #23955e; }
+.loud .off { color: #c4553d; }
+
+textarea { width: 100%; min-height: 150px; border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 12px/1.5 ui-monospace, Menlo, monospace; background: var(--fill); resize: vertical; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+</style>
+</head>
+<body>
+
+<div class="bar"><div class="bar-in">
+  <h1>Звуки</h1>
+  <label>Тональность <select id="key"></select></label>
+  <label>Общая громкость <input id="master" type="range" min="0" max="1" step="0.01"></label>
+  <label>Размер зала <input id="room" type="range" min="0" max="1" step="0.05"></label>
+  <button class="btn" id="sceneWin">Сценка: победа</button>
+  <button class="btn" id="sceneFail">Сценка: провал</button>
+  <span class="keys"><kbd>Пробел</kbd> музыка · <kbd>1</kbd>–<kbd>4</kbd> звуки</span>
+</div></div>
+
+<main class="wrap" id="cards"></main>
+
+<script>
+// ==================== движок звука: начало ====================
+// Всё синтезируется кодом, файлов нет. Музыка считается один раз в буфер и играет петлёй:
+// на слабом телефоне петля из буфера почти ничего не стоит, а живой синтез каждой ноты стоил бы.
+// Все ноты берутся из одного лада (мажорная пентатоника тональности), поэтому звуки ложатся на музыку.
+const Sound = (() => {
+  const DEFAULTS = {
+    key: 0, master: 0.8, duck: 0.65, room: 0.5,   // room — размер зала, общий для музыки и звуков
+    music: { prog: 0, bpm: 72, swing: 0.58, warmth: 3600, tape: 10, vinyl: 0.5, drums: 0.8, bass: 0.8, keys: 0.9, melody: 0.6, reverb: 1, comp: 0.5, bars: 8, volume: 0.9 },
+    tap:  { v: 0, volume: 0.7, pitch: 0, spread: 2, length: 1, reverb: 0 },
+    chop: { v: 0, volume: 0.8, pitch: 0, length: 1, reverb: 0.1 },
+    win:  { v: 0, volume: 0.7, octave: 0, pace: 1, length: 1, reverb: 0.4 },
+    fail: { v: 0, volume: 0.7, octave: 0, length: 1, reverb: 0.3 },
+  };
+  // аккорды: [бас, [голоса]] в до мажоре, сдвигаются тональностью
+  const PROGS = [
+    { name: 'Спуск', chords: [[41, [57, 60, 64, 67]], [40, [55, 59, 62, 64]], [38, [53, 57, 60, 64]], [36, [52, 55, 59, 62]]] },
+    { name: 'Тёплый круг', chords: [[36, [52, 55, 59, 62]], [45, [55, 59, 60, 64]], [38, [53, 57, 60, 64]], [43, [53, 57, 59, 64]]] },
+    { name: 'Задумчивый', chords: [[45, [55, 59, 60, 64]], [41, [52, 57, 60, 64]], [38, [53, 57, 60, 64]], [40, [56, 59, 62, 65]]] },
+  ];
+  const P5 = [0, 2, 4, 7, 9];
+  const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+  const penta = (root, deg) => root + 12 * Math.floor(deg / 5) + P5[((deg % 5) + 5) % 5];
+  function rng(seed) {
+    return () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  }
+
+  // ---------- кирпичики ----------
+  const noises = new WeakMap();
+  function noise(c) {
+    let b = noises.get(c);
+    if (!b) {
+      const n = c.sampleRate * 2, r = rng(7); b = c.createBuffer(1, n, c.sampleRate);
+      const d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = r() * 2 - 1;
+      noises.set(c, b);
+    }
+    return b;
+  }
+  function osc(c, type, f, t, end) { const o = c.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t); o.start(t); o.stop(end); return o; }
+  function gain(c, v, to) { const g = c.createGain(); g.gain.value = v; if (to) g.connect(to); return g; }
+  function filter(c, type, f, q, to) { const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; if (to) fl.connect(to); return fl; }
+  // удар: подъём за attack, спад почти до нуля за decay
+  function hit(g, t, peak, decay, attack = 0.003) { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + attack); g.gain.setTargetAtTime(0, t + attack, decay / 3); }
+  function nz(c, out, t, type, f, q, peak, decay) {
+    const n = c.createBufferSource(); n.buffer = noise(c);
+    const g = gain(c, 0, out); hit(g, t, peak, decay, 0.001);
+    n.connect(filter(c, type, f, q, g)); n.start(t, Math.random() * 1.5); n.stop(t + decay * 2 + 0.05);
+  }
+  function ir(c, sec, pow, r) {
+    const n = Math.floor(sec * c.sampleRate), b = c.createBuffer(2, n, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < n; i++) d[i] = (r() * 2 - 1) * Math.pow(1 - i / n, pow); }
+    return b;
+  }
+
+  // ---------- голоса ----------
+  const V = {
+    // электропиано: частотная модуляция 1:1 даёт тёплый «родес», сверху короткий звон
+    ep(c, out, t, m, dur, vel, wob) {
+      const f = mtof(m), end = t + dur + 1.2;
+      const car = osc(c, 'sine', f, t, end), mod = osc(c, 'sine', f, t, end), mg = gain(c, 0), g = gain(c, 0, out);
+      mg.gain.setValueAtTime(f * (0.8 + 1.6 * vel), t); mg.gain.setTargetAtTime(f * 0.18, t, 0.35);
+      mod.connect(mg).connect(car.frequency); car.connect(g);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel * 0.2, t + 0.005);
+      g.gain.setTargetAtTime(vel * 0.09, t + 0.005, 0.5); g.gain.setTargetAtTime(0, t + dur, 0.15);
+      const tine = osc(c, 'sine', f * 4, t, t + 0.4), tg = gain(c, 0, out); hit(tg, t, vel * 0.025, 0.12); tine.connect(tg);
+      if (wob) { wob.connect(car.detune); wob.connect(mod.detune); }
+    },
+    bass(c, out, t, m, dur, vel, wob) {
+      const f = mtof(m), end = t + dur + 0.4;
+      const a = osc(c, 'triangle', f, t, end), b = osc(c, 'sine', f, t, end), g = gain(c, 0, out), lp = filter(c, 'lowpass', 520, 0.5, g);
+      a.connect(gain(c, 0.45, lp)); b.connect(lp);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel * 0.5, t + 0.012);
+      g.gain.setTargetAtTime(vel * 0.32, t + 0.012, 0.25); g.gain.setTargetAtTime(0, t + dur, 0.06);
+      if (wob) { wob.connect(a.detune); wob.connect(b.detune); }
+    },
+    marimba(c, out, t, m, vel, len = 1) {
+      const f = mtof(m), d = 0.5 * len;
+      const a = osc(c, 'sine', f, t, t + d * 2 + 0.05), ag = gain(c, 0, out); hit(ag, t, vel * 0.5, d, 0.002); a.connect(ag);
+      const b = osc(c, 'sine', f * 3.93, t, t + 0.25), bg = gain(c, 0, out); hit(bg, t, vel * 0.12, 0.06 * len, 0.001); b.connect(bg);
+    },
+    bell(c, out, t, m, vel, len = 1) {
+      const f = mtof(m), d = 1.4 * len, end = t + d * 2;
+      const car = osc(c, 'sine', f, t, end), mod = osc(c, 'sine', f * 3.5, t, end), mg = gain(c, 0), g = gain(c, 0, out);
+      mg.gain.setValueAtTime(f * 2.2, t); mg.gain.setTargetAtTime(f * 0.1, t, d / 4);
+      mod.connect(mg).connect(car.frequency); car.connect(g); hit(g, t, vel * 0.22, d, 0.002);
+    },
+    wood(c, out, t, m, vel, len) {
+      const f = mtof(m);
+      const a = osc(c, 'sine', f, t, t + 0.3), ag = gain(c, 0, out);
+      a.frequency.exponentialRampToValueAtTime(f * 0.85, t + 0.05); hit(ag, t, vel * 0.6, 0.07 * len, 0.001); a.connect(ag);
+      const b = osc(c, 'triangle', f * 2.3, t, t + 0.15), bg = gain(c, 0, out); hit(bg, t, vel * 0.1, 0.025 * len, 0.001); b.connect(bg);
+      nz(c, out, t, 'bandpass', f * 2, 3, vel * 0.15, 0.015);
+    },
+    drop(c, out, t, m, vel, len) {
+      const f = mtof(m), o = osc(c, 'sine', f * 0.6, t, t + 0.4), g = gain(c, 0, out);
+      o.frequency.exponentialRampToValueAtTime(f * 1.25, t + 0.06 * len); hit(g, t, vel * 0.55, 0.1 * len, 0.004); o.connect(g);
+    },
+  };
+
+  // ---------- звуки игры ----------
+  let lastTap = null;
+  const SFX = {
+    // один звук на все нажатия; высота гуляет по соседним ступеням лада и не повторяется подряд
+    tap(c, out, t, s, root) {
+      let deg = s.pitch + (s.spread ? Math.round((Math.random() * 2 - 1) * s.spread) : 0);
+      if (s.spread && deg === lastTap) deg += Math.random() < 0.5 ? 1 : -1;
+      lastTap = deg;
+      const vel = 0.85 + Math.random() * 0.15;
+      if (s.v === 0) V.wood(c, out, t, penta(root + 12, deg + 3), vel, s.length);
+      else if (s.v === 1) V.drop(c, out, t, penta(root + 12, deg), vel, s.length);
+      else V.marimba(c, out, t, penta(root + 12, deg), vel * 0.9, s.length * 0.6);
+      return 0;
+    },
+    chop(c, out, t, s) {
+      const p = Math.pow(2, s.pitch / 12), L = s.length, v = s.v;
+      if (v === 2) {   // только треск щепок, без удара
+        for (let i = 0; i < 7; i++) nz(c, out, t + (i ? Math.random() * 0.16 * L : 0), 'highpass', 2500 * p, 0.7, 6 * (0.08 + Math.random() * 0.14), 0.012);
+        return 0;
+      }
+      const k = osc(c, 'sine', 160 * p, t, t + 0.5), kg = gain(c, 0, out);   // удар обуха
+      k.frequency.exponentialRampToValueAtTime(55 * p, t + 0.08 * L); hit(kg, t, v === 1 ? 0.9 : 0.7, 0.16 * L, 0.001); k.connect(kg);
+      nz(c, out, t, 'bandpass', 2400 * p, 1.1, v === 1 ? 0.12 : 0.45, 0.06 * L);   // лезвие входит в дерево
+      (v === 1 ? [300, 470] : [390, 640, 1150]).forEach((f, i) => {   // древесина
+        const o = osc(c, 'sine', f * p, t, t + 0.5), g = gain(c, 0, out);
+        hit(g, t, [0.25, 0.15, 0.08][i], [0.13, 0.09, 0.05][i] * L, 0.001); o.connect(g);
+      });
+      return 0;
+    },
+    win(c, out, t, s, root) {
+      const o = 12 * s.octave, gap = 0.085 * s.pace, L = s.length;
+      if (s.v === 0) [0, 2, 3, 5].forEach((d, i) => V.marimba(c, out, t + i * gap, penta(root + 12, d) + o, i === 3 ? 1 : 0.8, L * (i === 3 ? 2 : 1)));
+      else if (s.v === 1) [3, 5, 7, 8].forEach((d, i) => V.bell(c, out, t + i * gap * 1.3, penta(root + 12, d) + o, 0.7 + i * 0.1, L));
+      else if (s.v === 2) [0, 4, 7, 11, 14].forEach((d, i) => V.ep(c, out, t + i * gap * 0.7, root + 12 + d + o, 0.9 * L, 0.7));
+      else {   // тот же приглушённый инструмент, что у провала «Вниз», только ноты идут вверх
+        const lp = filter(c, 'lowpass', 1600, 0.5, out);
+        [2, 3, 5].forEach((d, i) => V.ep(c, lp, t + i * 0.17 * s.pace, penta(root, d) + o, i === 2 ? 0.8 * L : 0.18 * L, 0.65));
+      }
+      return 1.0 * L + 0.3 * s.pace;
+    },
+    fail(c, out, t, s, root) {
+      const o = 12 * s.octave, L = s.length;
+      if (s.v === 0) {   // три ноты вниз, к минору
+        const lp = filter(c, 'lowpass', 1600, 0.5, out);
+        [2, 1, -1].forEach((d, i) => V.ep(c, lp, t + i * 0.17, penta(root, d) + o, i === 2 ? 0.6 * L : 0.18 * L, 0.65));
+      } else if (s.v === 1) {   // «ва — ва-а-а»: вторая нота сползает с дрожью
+        const lp = filter(c, 'lowpass', 1400, 0.5, out), t2 = t + 0.2, slide = 0.5 * L;
+        const a = osc(c, 'triangle', mtof(penta(root, 2) + o), t, t2 + 0.12 + slide + 0.6), g = gain(c, 0, lp); a.connect(g);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.35, t + 0.02); g.gain.setTargetAtTime(0, t + 0.12, 0.03);
+        a.frequency.setValueAtTime(mtof(penta(root, 1) + o), t2); a.frequency.setValueAtTime(mtof(penta(root, 1) + o), t2 + 0.12);
+        a.frequency.exponentialRampToValueAtTime(mtof(penta(root, -1) + o), t2 + 0.12 + slide);
+        g.gain.setValueAtTime(0, t2); g.gain.linearRampToValueAtTime(0.38, t2 + 0.03);
+        g.gain.setTargetAtTime(0.25, t2 + 0.03, 0.2); g.gain.setTargetAtTime(0, t2 + 0.12 + slide, 0.12);
+        const lfo = osc(c, 'sine', 5.5, t2, t2 + 0.12 + slide + 0.6), lg = gain(c, 0);
+        lg.gain.setValueAtTime(0, t2 + 0.1); lg.gain.linearRampToValueAtTime(30, t2 + 0.12 + slide);
+        lfo.connect(lg).connect(a.detune);
+      } else {   // глухой аккорд: «эх»
+        const lp = filter(c, 'lowpass', 900, 0.5, out);
+        [-10, -7, -3, 0].forEach((d, i) => V.ep(c, lp, t + i * 0.015, root + d + o, 0.45 * L, 0.55));
+        V.bass(c, lp, t, root - 22 + o, 0.5 * L, 0.7);
+      }
+      return 0.9 * L;
+    },
+  };
+
+  // ---------- музыка: считается прямо в массивах ----------
+  // Не через OfflineAudioContext: там каждая нота оставляет живые узлы, и 8 тактов собирались 3,5 с даже на ПК.
+  // Петля замкнута: хвосты нот, реверберация и фильтры переходят через конец в начало, шва нет.
+  // Голоса D повторяют голоса V (те играют звуки игры вживую).
+  const TAB = 4096, SIN = new Float32Array(TAB);
+  for (let i = 0; i < TAB; i++) SIN[i] = Math.sin(2 * Math.PI * i / TAB);
+  const sin1 = ph => SIN[(ph * TAB | 0) & (TAB - 1)];   // ph — в оборотах
+  const decay = (tau, sr) => Math.exp(-1 / (tau * sr));
+  const toward = (tau, sr) => 1 - Math.exp(-1 / (tau * sr));
+  function bq(type, f, q, sr) {
+    const w = 2 * Math.PI * f / sr, cs = Math.cos(w), al = Math.sin(w) / (2 * q);
+    const b = type === 'lowpass' ? [(1 - cs) / 2, 1 - cs, (1 - cs) / 2] : type === 'highpass' ? [(1 + cs) / 2, -(1 + cs), (1 + cs) / 2] : [al, 0, -al];
+    const a0 = 1 + al;
+    return [b[0] / a0, b[1] / a0, b[2] / a0, -2 * cs / a0, (1 - al) / a0];
+  }
+  // фильтр по кругу: сначала прогоняем конец петли, чтобы набралось состояние, потом пишем всё
+  function filt(x, co, warm) {
+    const [b0, b1, b2, a1, a2] = co, N = x.length;
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let k = -Math.min(warm, N); k < N; k++) {
+      const n = k < 0 ? k + N : k, xi = x[n], y = b0 * xi + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+      x2 = x1; x1 = xi; y2 = y1; y1 = y;
+      if (k >= 0) x[n] = y;
+    }
+  }
+  // реверберация Шрёдера: 4 гребёнки и 2 всепропускающих, правый канал чуть длиннее
+  function reverb(x, sr, warm, fb) {
+    const N = x.length, sc = sr / 44100;
+    return [0, 23].map(sp => {
+      const cb = [1116, 1277, 1422, 1557].map(l => new Float32Array(Math.round((l + sp) * sc))), ci = [0, 0, 0, 0], cf = [0, 0, 0, 0];
+      const ab = [556, 341].map(l => new Float32Array(Math.round((l + sp) * sc))), ai = [0, 0];
+      const y = new Float32Array(N), damp = 0.3;
+      for (let k = -Math.min(warm, N); k < N; k++) {
+        const n = k < 0 ? k + N : k, inp = x[n] * 0.3;
+        let s = 0;
+        for (let c = 0; c < 4; c++) {
+          const buf = cb[c], o = buf[ci[c]];
+          cf[c] = o * (1 - damp) + cf[c] * damp; buf[ci[c]] = inp + cf[c] * fb;
+          if (++ci[c] === buf.length) ci[c] = 0;
+          s += o;
+        }
+        for (let a = 0; a < 2; a++) {
+          const buf = ab[a], bo = buf[ai[a]], o = bo - s;
+          buf[ai[a]] = s + bo * 0.5; if (++ai[a] === buf.length) ai[a] = 0;
+          s = o;
+        }
+        if (k >= 0) y[n] = s;
+      }
+      return y;
+    });
+  }
+  const D = {
+    ep(b, sr, s0, m, dur, vel, wf) {
+      const N = b.length, f = mtof(m) / sr, len = (dur + 1) * sr | 0, rel = dur * sr | 0, att = 0.005 * sr | 0;
+      const aS = toward(0.5, sr), aR = toward(0.15, sr), aI = toward(0.35, sr), kT = decay(0.04, sr), top = vel * 0.2, sus = vel * 0.09;
+      let ph = 0, e = 0, I = 0.8 + 1.6 * vel, tine = vel * 0.025, j = s0 % N;
+      for (let i = 0; i < len; i++) {
+        if (i < att) e = top * i / att; else if (i < rel) e += (sus - e) * aS; else e -= e * aR;
+        I += (0.18 - I) * aI; ph += f * wf[j];
+        b[j] += e * sin1(ph + I * 0.159155 * sin1(ph)) + tine * sin1(4 * ph); tine *= kT;
+        if (++j === N) j = 0;
+      }
+    },
+    bass(b, sr, s0, m, dur, vel, wf) {
+      const N = b.length, f = mtof(m) / sr, len = (dur + 0.4) * sr | 0, rel = dur * sr | 0, att = 0.012 * sr | 0;
+      const aS = toward(0.25, sr), aR = toward(0.06, sr), top = vel * 0.5, sus = vel * 0.32;
+      let ph = 0, e = 0, j = s0 % N;
+      for (let i = 0; i < len; i++) {
+        if (i < att) e = top * i / att; else if (i < rel) e += (sus - e) * aS; else e -= e * aR;
+        ph += f * wf[j]; b[j] += e * (1.3 * sin1(ph) + 0.1 * sin1(3 * ph));
+        if (++j === N) j = 0;
+      }
+    },
+    kick(b, sr, s0, vel) {
+      const N = b.length, len = 0.6 * sr | 0, kA = decay(0.127, sr), kF = decay(0.03, sr), att = 0.002 * sr | 0;
+      let ph = 0, e = vel * 0.9, fe = 1, j = s0 % N;
+      for (let i = 0; i < len; i++) {
+        ph += (44 + 76 * fe) / sr; fe *= kF;
+        b[j] += e * (i < att ? i / att : 1) * sin1(ph); e *= kA;
+        if (++j === N) j = 0;
+      }
+    },
+    snare(b, sr, s0, vel, r) {
+      const N = b.length, len = 0.3 * sr | 0, [b0, b1, b2, a1, a2] = bq('bandpass', 1700, 0.7, sr), kN = decay(0.067, sr), kT = decay(0.03, sr), kF = decay(0.033, sr);
+      let x1 = 0, x2 = 0, y1 = 0, y2 = 0, e = vel * 0.5, et = vel * 0.35, ph = 0, fe = 1, j = s0 % N;
+      for (let i = 0; i < len; i++) {
+        const xi = r() * 2 - 1, y = b0 * xi + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+        x2 = x1; x1 = xi; y2 = y1; y1 = y;
+        ph += (150 + 35 * fe) / sr; fe *= kF;
+        b[j] += e * y + et * sin1(ph); e *= kN; et *= kT;
+        if (++j === N) j = 0;
+      }
+    },
+    hat(b, sr, s0, vel, r) {
+      const N = b.length, len = 0.1 * sr | 0, [b0, b1, b2, a1, a2] = bq('highpass', 7000, 0.6, sr), k = decay(0.015, sr);
+      let x1 = 0, x2 = 0, y1 = 0, y2 = 0, e = vel * 0.18, j = s0 % N;
+      for (let i = 0; i < len; i++) {
+        const xi = r() * 2 - 1, y = b0 * xi + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+        x2 = x1; x1 = xi; y2 = y1; y1 = y;
+        b[j] += e * y; e *= k;
+        if (++j === N) j = 0;
+      }
+    },
+    marimba(b, sr, s0, m, vel, ln) {
+      const N = b.length, f = mtof(m) / sr, d = 0.5 * ln, len = (d * 2 + 0.05) * sr | 0, att = 0.002 * sr | 0;
+      const k1 = decay(d / 3, sr), k2 = decay(0.02 * ln, sr);
+      let ph = 0, e1 = vel * 0.5, e2 = vel * 0.12, j = s0 % N;
+      for (let i = 0; i < len; i++) {
+        ph += f; b[j] += (i < att ? i / att : 1) * (e1 * sin1(ph) + e2 * sin1(3.93 * ph)); e1 *= k1; e2 *= k2;
+        if (++j === N) j = 0;
+      }
+    },
+  };
+
+  // ---------- громкость на слух (LUFS) ----------
+  // Громкость в LUFS по BS.1770: фильтр K (так ухо слышит высоты), окна по 400 мс через 100 мс.
+  // Нужна и сборке музыки (выравнивание), и замеру в лаборатории.
+  // Для коротких звуков — самое громкое окно (momentary max), для музыки — средняя по всей петле (integrated).
+  function kweight(x, sr) {
+    // полка +4 дБ от 1500 Гц и срез ниже 38 Гц — параметры как в pyloudnorm (под эти формулы)
+    const A = Math.pow(10, 4 / 40), w = 2 * Math.PI * 1500 / sr, cs = Math.cos(w), al = Math.sin(w) / (2 * Math.SQRT1_2), sq = 2 * Math.sqrt(A) * al;
+    const a0 = (A + 1) - (A - 1) * cs + sq;
+    const shelf = [A * ((A + 1) + (A - 1) * cs + sq) / a0, -2 * A * ((A - 1) + (A + 1) * cs) / a0, A * ((A + 1) + (A - 1) * cs - sq) / a0, 2 * ((A - 1) - (A + 1) * cs) / a0, ((A + 1) - (A - 1) * cs - sq) / a0];
+    const y = Float32Array.from(x);
+    for (const [b0, b1, b2, a1, a2] of [shelf, bq('highpass', 38, 0.5, sr)]) {
+      let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+      for (let i = 0; i < y.length; i++) { const xi = y[i], v = b0 * xi + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = xi; y2 = y1; y1 = v; y[i] = v; }
+    }
+    return y;
+  }
+  function loudness(chs, sr) {
+    const k = chs.map(x => kweight(x, sr)), win = Math.round(0.4 * sr), hop = Math.round(0.1 * sr), z = [];
+    for (let s = 0; s + win <= k[0].length; s += hop) {
+      let sum = 0; for (const y of k) for (let i = s; i < s + win; i++) sum += y[i] * y[i];
+      z.push(sum / win);
+    }
+    const lu = v => -0.691 + 10 * Math.log10(v || 1e-12), ls = z.map(lu);
+    const mean = idx => idx.reduce((a, i) => a + z[i], 0) / (idx.length || 1);
+    const abs = z.map((_, i) => i).filter(i => ls[i] > -70), rel = lu(mean(abs)) - 10;
+    let peak = 0; for (const x of chs) for (let i = 0; i < x.length; i++) peak = Math.max(peak, Math.abs(x[i]));
+    return { momentary: Math.max(...ls), integrated: lu(mean(abs.filter(i => ls[i] > rel))), peak: 20 * Math.log10(peak || 1e-9) };
+  }
+
+  // компрессор на всю музыку: громкие места прижимаются, после выравнивания тихие становятся ближе к громким.
+  // Порог и степень — от одного ползунка; уровень считаем от пика 0 dBFS, атака 15 мс пропускает удары, отпускание 200 мс.
+  // Датчик общий для двух каналов, по кругу, как фильтры. Возвращает, на сколько дБ прижимал: в среднем и самое большее.
+  function compress(L, R, sr, amount, warm) {
+    if (amount <= 0) return { avg: 0, max: 0 };
+    const N = L.length;
+    let pk = 0;
+    for (const o of [L, R]) for (let i = 0; i < N; i++) pk = Math.max(pk, Math.abs(o[i]));
+    const pre = pk > 0 ? 1 / pk : 1, th = -6 - 18 * amount, slope = 1 - 1 / (1 + 5 * amount), knee = 6;
+    const aA = toward(0.015, sr), aR = toward(0.2, sr);
+    let env = 0, sum = 0, max = 0;
+    for (let k = -Math.min(warm, N); k < N; k++) {
+      const n = k < 0 ? k + N : k, x = Math.max(Math.abs(L[n]), Math.abs(R[n])) * pre;
+      env += (x - env) * (x > env ? aA : aR);
+      const over = 20 * Math.log10(env + 1e-9) - th;
+      const gr = over > knee / 2 ? over * slope : over > -knee / 2 ? slope * (over + knee / 2) ** 2 / (2 * knee) : 0;
+      if (k < 0) continue;
+      const g = Math.pow(10, -gr / 20);
+      L[n] *= g; R[n] *= g; sum += gr; if (gr > max) max = gr;
+    }
+    return { avg: sum / N, max };
+  }
+
+  async function build() {
+    const m = cfg.music, key = cfg.key, prog = PROGS[m.prog] || PROGS[0];
+    // половинная частота: выше 8 кГц тёплый фильтр всё равно режет, а счёта и памяти вдвое меньше
+    const sr = (ctx ? ctx.sampleRate : 44100) / 2, r = rng(1234 + m.prog * 101 + m.bars), rn = rng(77);
+    const step = 60 / m.bpm / 4, bar = step * 16, L = m.bars * bar, N = Math.round(L * sr);
+    // считаем кусками и отдаём ход странице, чтобы игра не замирала; busy — чистое время счёта
+    let busy = 0, t0 = performance.now();
+    const breathe = async () => { busy += performance.now() - t0; await new Promise(res => setTimeout(res, 0)); t0 = performance.now(); };
+    const bus = () => new Float32Array(N);
+    const keys = bus(), bass = bus(), kick = bus(), snare = bus(), hat = bus(), mel = bus();
+
+    // «плёнка»: высота плавает; периоды кратны длине петли, чтобы шов не был слышен
+    const wf = new Float32Array(N), n1 = Math.max(1, Math.round(L / 2.5));
+    for (let i = 0; i < N; i += 32) {   // раз в 32 отсчёта: ступеньки в доли цента не слышны
+      const v = Math.pow(2, m.tape * (Math.sin(2 * Math.PI * n1 * i / N) + 0.6 * Math.sin(2 * Math.PI * i / N)) / 1200);
+      wf.fill(v, i, Math.min(N, i + 32));
+    }
+
+    const at = (b, s) => Math.round(sr * Math.max(0, b * bar + s * step + (s % 2 ? (m.swing - 0.5) * 2 * step : 0) + (r() - 0.5) * 0.008));
+    const allowed = (pc, tones) => tones.includes(pc) || !tones.some(x => Math.abs(((pc - x + 18) % 12) - 6) === 1);
+    let mp = key + 76;
+    for (let b = 0; b < m.bars; b++) {
+      const [root, voices] = prog.chords[b % 4], rehit = r() < 0.55, last = b === m.bars - 1;
+      // аккорд: удар на раз, иногда повтор на «три-и»
+      const v1 = 0.75 + r() * 0.15;
+      voices.forEach((n, i) => D.ep(keys, sr, at(b, 0) + Math.round((i * 0.012 + r() * 0.008) * sr), n + key, (rehit ? 10 : 15.5) * step, v1, wf));
+      if (rehit) voices.forEach((n, i) => D.ep(keys, sr, at(b, 10) + Math.round(i * 0.01 * sr), n + key, 5.5 * step, v1 * 0.65, wf));
+      // бас
+      D.bass(bass, sr, at(b, 0), root + key, 6 * step, 0.9, wf);
+      D.bass(bass, sr, at(b, 10), root + key + (r() < 0.6 ? 0 : 7), 3.5 * step, 0.75, wf);
+      if (r() < 0.3) D.bass(bass, sr, at(b, 14), root + key + 12, 1.5 * step, 0.5, wf);
+      // барабаны
+      D.kick(kick, sr, at(b, 0), 0.9); D.kick(kick, sr, at(b, 10), 0.75);
+      if (r() < 0.5) D.kick(kick, sr, at(b, 7), 0.6);
+      [4, 12].forEach(s => D.snare(snare, sr, at(b, s), 0.8, rn));
+      if (r() < 0.2 || last) D.snare(snare, sr, at(b, last ? 14 : 15), 0.28, rn);
+      for (let s = 0; s < 16; s++) {
+        if (s % 2 === 0) D.hat(hat, sr, at(b, s), (s % 4 === 0 ? 0.6 : 0.45) + r() * 0.1, rn);
+        else if (r() < 0.2) D.hat(hat, sr, at(b, s), 0.25, rn);
+      }
+      // мелодия: несколько нот лада, которые не спорят с аккордом
+      if (m.melody > 0 && r() < 0.75) {
+        const tones = [root, ...voices].map(n => (n + key) % 12), cand = [];
+        for (let d = -2; d < 12; d++) { const n = penta(key + 72, d); if (n >= key + 69 && n <= key + 88 && allowed(n % 12, tones)) cand.push(n); }
+        const pats = [[0, 3, 6], [2, 6, 10, 12], [4, 7], [8, 10, 11, 14], [0, 6, 8]], pat = pats[Math.floor(r() * pats.length)];
+        if (cand.length) {
+          let i = cand.reduce((best, n, j) => Math.abs(n - mp) < Math.abs(cand[best] - mp) ? j : best, 0);
+          for (const s of pat) {
+            i = Math.min(cand.length - 1, Math.max(0, i + [-2, -1, -1, 0, 1, 1, 2][Math.floor(r() * 7)]));
+            mp = cand[i]; D.marimba(mel, sr, at(b, s), mp, 0.5 + r() * 0.25, 1.6);
+          }
+        }
+      }
+      await breathe();
+    }
+
+    // реверберация: пиано, мелодия и немного малого барабана
+    const warm = Math.round(0.5 * sr), send = bus();
+    for (let i = 0; i < N; i++) send[i] = (keys[i] * m.keys * 0.25 + mel[i] * m.melody * 0.4 + snare[i] * m.drums * 0.12) * m.reverb;
+    const [rl, rr] = reverb(send, sr, Math.min(N, 3 * sr), 0.72 + 0.22 * cfg.room);
+    await breathe();
+    const lp3 = bq('lowpass', 3000, 0.707, sr); filt(rl, lp3, warm); filt(rr, lp3, warm);
+    // сведение: шина → срез низа → тёплый фильтр → компрессор → мягкое насыщение
+    const hl = Math.cos((0.3 + 1) * Math.PI / 4), hr = Math.sin((0.3 + 1) * Math.PI / 4);   // тарелки чуть вправо
+    const ml = Math.cos((-0.25 + 1) * Math.PI / 4), mr = Math.sin((-0.25 + 1) * Math.PI / 4);   // мелодия чуть влево
+    const outL = bus(), outR = bus();
+    for (let i = 0; i < N; i++) {
+      const mono = keys[i] * m.keys + bass[i] * m.bass + (kick[i] + snare[i]) * m.drums;
+      outL[i] = 0.5 * (mono + hat[i] * m.drums * hl * 1.41 + mel[i] * m.melody * ml * 1.41 + rl[i]);
+      outR[i] = 0.5 * (mono + hat[i] * m.drums * hr * 1.41 + mel[i] * m.melody * mr * 1.41 + rr[i]);
+    }
+    await breathe();
+    const hp = bq('highpass', 35, 0.707, sr), lpw = bq('lowpass', m.warmth, 0.6, sr), sat = Math.tanh(1.6);
+    for (const o of [outL, outR]) { filt(o, hp, warm); filt(o, lpw, warm); }
+    const gr = compress(outL, outR, sr, m.comp, warm);
+    for (const o of [outL, outR]) for (let i = 0; i < N; i++) o[i] = Math.tanh(1.6 * o[i]) / sat;
+    await breathe();
+
+    // пластинка: тихое шипение и редкие щелчки, мимо тёплого фильтра
+    if (m.vinyl > 0) for (const [ch, o] of [outL, outR].entries()) {
+      const v = bus(), rv = rng(99 + ch);
+      for (let i = 0; i < N; i++) v[i] = (rv() * 2 - 1) * 0.012;
+      for (let k = 0, clicks = Math.floor(L * 7); k < clicks; k++) {
+        const p = Math.floor(rv() * N), a = (rv() < 0.08 ? 0.9 : 0.25) * rv() * (rv() < 0.5 ? -1 : 1), tau = 2 + rv() * 10;
+        for (let j = 0; j < 40; j++) v[(p + j) % N] += a * Math.exp(-j / tau);
+      }
+      filt(v, bq('bandpass', 2500, 0.4, sr), warm);
+      const g = m.vinyl * 0.15;
+      for (let i = 0; i < N; i++) o[i] += v[i] * g;
+    }
+
+    // выравниваем по громкости на слух: при громкости музыки 100 % петля звучит на −18 LUFS,
+    // что бы ни крутили ползунки и компрессор; редкие пики (щелчки пластинки, удары) мягко срезаются у −1 dBFS
+    const k = Math.pow(10, (-18 - loudness([outL, outR], sr).integrated) / 20), th = 0.6, ceil = 0.89, res = ctx.createBuffer(2, N, sr);
+    let clip = 0;
+    [outL, outR].forEach((o, ch) => {
+      for (let i = 0; i < N; i++) {
+        const v = o[i] * k, a = Math.abs(v);
+        if (a <= th) { o[i] = v; continue; }
+        const y = th + (ceil - th) * Math.tanh((a - th) / (ceil - th));
+        o[i] = v < 0 ? -y : y; if (a / y > clip) clip = a / y;
+      }
+      res.copyToChannel(o, ch);
+    });
+    busy += performance.now() - t0;
+    return { buffer: res, ms: Math.round(busy), len: L, comp: gr, clip: clip ? 20 * Math.log10(clip) : 0 };
+  }
+
+  // ---------- проигрывание ----------
+  const cfg = JSON.parse(JSON.stringify(DEFAULTS));
+  let ctx = null, master, musicBus, duckG, sfxBus, verb, verbOut, conv = null, paused = false;
+  let src = null, srcGain = null, srcStart = 0, buf = null, musicOn = false, gen = 0, stats = null;
+  function ensure() {
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC();
+      master = gain(ctx, cfg.master, limiter(ctx));
+      duckG = gain(ctx, 1, master); musicBus = gain(ctx, cfg.music.volume, duckG);
+      sfxBus = gain(ctx, 1, master);
+      verbOut = filter(ctx, 'lowpass', 4000, 0.5, gain(ctx, 5, sfxBus)); verb = gain(ctx, 1); setRoom();   // ×5: при 100 % отзвук вровень с сухим звуком
+    }
+    // создали посреди паузы площадки (реклама, свёрнутая вкладка) — молчим до resume()
+    if (paused) { if (ctx.state === 'running') ctx.suspend(); } else if (ctx.state !== 'running') ctx.resume();
+    return ctx;
+  }
+  function duckFor(sec) {
+    if (!src || cfg.duck <= 0) return;
+    const t = ctx.currentTime, g = duckG.gain;
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
+    g.setTargetAtTime(1 - cfg.duck, t, 0.05); g.setTargetAtTime(1, t + sec, 0.4);
+  }
+  // страховка от перегруза, когда звуки накладываются
+  function limiter(c) {
+    const comp = c.createDynamicsCompressor();
+    comp.threshold.value = -4; comp.knee.value = 4; comp.ratio.value = 8; comp.attack.value = 0.003; comp.release.value = 0.2;
+    comp.connect(c.destination);
+    return comp;
+  }
+  // один звук в шину bus, отзвук — во вход зала vin; возвращает, на сколько секунд присесть музыке
+  function voice(c, bus, vin, name, t) {
+    const s = cfg[name], out = gain(c, s.volume, bus);
+    if (s.reverb) out.connect(gain(c, s.reverb, vin));
+    setTimeout(() => out.disconnect(), 5000);
+    return SFX[name](c, out, t, s, 60 + cfg.key);
+  }
+  function play(name) {
+    const c = ensure(); if (!c) return;
+    const hold = voice(c, sfxBus, verb, name, c.currentTime + 0.005);
+    if (hold) duckFor(hold);
+  }
+  function swap(nb) {
+    if (!musicOn || !ctx) return;
+    const t = ctx.currentTime;
+    let offset = 0;
+    if (src) {   // новая петля продолжает с той же доли, старая гаснет
+      offset = (((t - srcStart) % src.buffer.duration) / src.buffer.duration) * nb.duration;
+      srcGain.gain.setTargetAtTime(0, t, 0.15); src.stop(t + 1);
+    }
+    src = ctx.createBufferSource(); src.buffer = nb; src.loop = true;
+    srcGain = gain(ctx, 0, musicBus); src.connect(srcGain);
+    srcGain.gain.setTargetAtTime(1, t, offset ? 0.15 : 0.5);
+    src.start(t, offset); srcStart = t - offset;
+  }
+  async function rebuild() {
+    const my = ++gen, res = await build();
+    if (my !== gen) return;
+    buf = res.buffer; stats = res; api.onStats && api.onStats(res);
+    swap(buf);
+  }
+  async function startMusic() {
+    musicOn = true;
+    if (!ensure()) return;
+    if (buf) swap(buf); else await rebuild();
+  }
+  function stopMusic() {
+    musicOn = false;
+    if (!src) return;
+    srcGain.gain.setTargetAtTime(0, ctx.currentTime, 0.3); src.stop(ctx.currentTime + 1.5); src = null;
+  }
+  // зал для звуков: длина отзвука растёт с размером; узел меняем целиком, вход verb остаётся
+  function setRoom() {
+    if (!ctx) return;
+    const nc = ctx.createConvolver(); nc.buffer = ir(ctx, 0.6 + 2.4 * cfg.room, 3, rng(3));
+    verb.connect(nc); nc.connect(verbOut);
+    if (conv) { verb.disconnect(conv); conv.disconnect(); }
+    conv = nc;
+  }
+  function setVolumes() { if (!ctx) return; master.gain.value = cfg.master; musicBus.gain.value = cfg.music.volume; }
+  // настройки музыки поменялись: играет — пересобрать, нет — собрать при следующем запуске
+  function invalidate() { buf = null; if (musicOn) rebuild(); }
+  function pause() { paused = true; if (ctx) ctx.suspend(); }
+  function resume() { paused = false; if (ctx) ctx.resume(); }
+
+  // ---------- замер громкости (только для лаборатории, в игру не переносить) ----------
+  // звук целиком через ту же цепь, что в игре: громкость звука, зал, общая громкость, ограничитель
+  async function renderSfx(name) {
+    const sr = 48000, OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext, c = new OAC(2, sr * 3, sr);
+    const bus = gain(c, 1, gain(c, cfg.master, limiter(c))), vin = gain(c, 1), cv = c.createConvolver();
+    cv.buffer = ir(c, 0.6 + 2.4 * cfg.room, 3, rng(3));
+    vin.connect(cv).connect(filter(c, 'lowpass', 4000, 0.5, gain(c, 5, bus)));
+    voice(c, bus, vin, name, 0.05);
+    const b = await c.startRendering();
+    return loudness([b.getChannelData(0), b.getChannelData(1)], sr);
+  }
+  async function measure() {
+    if (!ensure()) return null;
+    const res = {}, mb = buf || (await build()).buffer, g = cfg.music.volume * cfg.master;
+    res.music = loudness([0, 1].map(ch => mb.getChannelData(ch).map(v => v * g)), mb.sampleRate);
+    for (const name of ['tap', 'chop', 'win', 'fail']) {
+      // у «тука» и треска есть случайность — берём среднее из нескольких; победа и провал всегда одинаковы
+      const runs = [];
+      for (let i = 0, n = name === 'tap' || name === 'chop' ? 8 : 1; i < n; i++) runs.push(await renderSfx(name));
+      const avg = key => runs.reduce((a, r) => a + r[key], 0) / runs.length;
+      res[name] = { momentary: avg('momentary'), integrated: avg('integrated'), peak: Math.max(...runs.map(r => r.peak)) };
+    }
+    return res;
+  }
+
+  const api = { DEFAULTS, PROGS, cfg, play, startMusic, stopMusic, invalidate, setVolumes, setRoom, pause, resume, measure, loudness, unlock: ensure,
+    get playing() { return musicOn; }, get stats() { return stats; }, onStats: null };
+  return api;
+})();
+// ==================== движок звука: конец ====================
+
+// ==================== лаборатория ====================
+const STORE = 'poryv-sound-lab';
+const $ = s => document.querySelector(s);
+const pct = v => Math.round(v * 100) + ' %';
+const num = v => String(v).replace('.', ',');
+const sign = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v);
+const times = v => '×' + num(Math.round(v * 100) / 100);
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
+    if (!saved) return;
+    for (const k of Object.keys(Sound.cfg)) {
+      if (!(k in saved)) continue;
+      if (typeof Sound.cfg[k] === 'object') Object.assign(Sound.cfg[k], saved[k]); else Sound.cfg[k] = saved[k];
+    }
+  } catch (e) { /* испорченное сохранение — берём по умолчанию */ }
+}
+function save() {
+  try { localStorage.setItem(STORE, JSON.stringify(Sound.cfg)); } catch (e) {}
+  const box = $('#json'); if (box) box.value = dump();
+}
+function dump() {
+  const c = Sound.cfg;
+  return '{\n' + Object.keys(c).map(k => `  "${k}": ${JSON.stringify(c[k])}`).join(',\n') + '\n}';
+}
+
+const CARDS = [
+  { id: 'music', title: 'Музыка', wide: true, hot: 'Пробел',
+    note: 'Одна петля, собирается заранее и играет по кругу. После изменения ползунка пересобирается сама, без паузы.',
+    variants: Sound.PROGS.map(p => p.name), vkey: 'prog',
+    sliders: [
+      ['bpm', 'Темп, ударов в минуту', 60, 90, 1, String],
+      ['swing', 'Свинг (раскачка)', 0.5, 0.7, 0.01, v => Math.round((v - 0.5) * 500) + ' %'],
+      ['warmth', 'Тёплость (меньше — глуше)', 1200, 8000, 100, v => v + ' Гц'],
+      ['tape', 'Плёнка (плавание высоты)', 0, 30, 1, v => v + ' центов'],
+      ['vinyl', 'Треск пластинки', 0, 1, 0.05, pct],
+      ['drums', 'Барабаны', 0, 1.5, 0.05, pct],
+      ['bass', 'Бас', 0, 1.5, 0.05, pct],
+      ['keys', 'Электропиано', 0, 1.5, 0.05, pct],
+      ['melody', 'Мелодия (0 — без неё)', 0, 1.5, 0.05, pct],
+      ['reverb', 'Реверберация', 0, 2, 0.05, pct],
+      ['comp', 'Компрессия', 0, 1, 0.05, pct],
+      ['bars', 'Длина петли, тактов', 4, 16, 4, String],
+      ['volume', 'Громкость музыки', 0, 1, 0.01, pct],
+    ] },
+  { id: 'tap', title: '«Тук»', hot: '1',
+    note: 'Все нажатия: кнопки, журнал, взять, поставить, поворот, галка, подсказка. Нажмите несколько раз подряд.',
+    variants: ['Деревяшка', 'Капля', 'Маримба'],
+    sliders: [
+      ['volume', 'Громкость', 0, 1.5, 0.01, pct],
+      ['pitch', 'Высота, ступени лада', -5, 5, 1, sign],
+      ['spread', 'Насколько гуляет высота', 0, 3, 1, String],
+      ['length', 'Длина', 0.5, 2, 0.05, times],
+      ['reverb', 'Реверберация', 0, 1, 0.01, pct],
+    ] },
+  { id: 'chop', title: 'Рубка', hot: '2',
+    note: 'Удар топора по дереву на уровнях вырубки.',
+    variants: ['Топор', 'Глухой', 'Треск'],
+    sliders: [
+      ['volume', 'Громкость', 0, 1.5, 0.01, pct],
+      ['pitch', 'Высота, полутоны', -12, 12, 1, sign],
+      ['length', 'Длина', 0.5, 2, 0.05, times],
+      ['reverb', 'Реверберация', 0, 1, 0.01, pct],
+    ] },
+  { id: 'win', title: 'Победа', hot: '3',
+    note: 'Короткий перелив. Если музыка играет, она приседает и возвращается.',
+    variants: ['Маримба', 'Колокольчики', 'Электропиано', 'Как провал'],
+    sliders: [
+      ['volume', 'Громкость', 0, 1.5, 0.01, pct],
+      ['octave', 'Октава', -1, 1, 1, sign],
+      ['pace', 'Растяжка нот', 0.6, 1.8, 0.05, times],
+      ['length', 'Длина звучания', 0.5, 2, 0.05, times],
+      ['reverb', 'Реверберация', 0, 1, 0.01, pct],
+    ] },
+  { id: 'fail', title: 'Провал', hot: '4',
+    note: 'Короткий грустный звук, когда дом не выдержал. Музыка тоже приседает.',
+    variants: ['Вниз', 'Сдувшийся', 'Глухой аккорд'],
+    sliders: [
+      ['volume', 'Громкость', 0, 1.5, 0.01, pct],
+      ['octave', 'Октава', -1, 1, 1, sign],
+      ['length', 'Длина', 0.5, 2, 0.05, times],
+      ['reverb', 'Реверберация', 0, 1, 0.01, pct],
+    ] },
+];
+
+function slider(sec, key, label, min, max, step, fmt, onChange) {
+  const el = document.createElement('label'); el.className = 'sl';
+  const val = sec ? Sound.cfg[sec][key] : Sound.cfg[key];
+  el.innerHTML = `<span>${label}</span><b></b><input type="range" min="${min}" max="${max}" step="${step}">`;
+  const inp = el.querySelector('input'), out = el.querySelector('b');
+  inp.value = val; out.textContent = fmt(val);
+  inp.addEventListener('input', () => {
+    const v = Number(inp.value);
+    if (sec) Sound.cfg[sec][key] = v; else Sound.cfg[key] = v;
+    out.textContent = fmt(v); save(); onChange && onChange('input', key);
+  });
+  inp.addEventListener('change', () => onChange && onChange('change', key));
+  syncers.push(() => { const v = sec ? Sound.cfg[sec][key] : Sound.cfg[key]; inp.value = v; out.textContent = fmt(v); });
+  return el;
+}
+const syncers = [];   // подтянуть ползунки к настройкам, когда их поменял не человек
+
+// ---------- громкость: замер и выравнивание ----------
+// Ориентиры при общей громкости 100 %: музыка — подложка, «тук» и рубка чуть тише неё (звучат часто;
+// у треска к тому же острые пики), итоги уровня громче музыки — их надо услышать.
+// Вся игра выходит около −18 LUFS, как советуют для портативных игр.
+const TARGETS = { music: -19, tap: -21, chop: -21, win: -16, fail: -17 };
+const LOUD_ROWS = [['music', 'Музыка', 'integrated'], ['tap', '«Тук»', 'momentary'], ['chop', 'Рубка', 'momentary'], ['win', 'Победа', 'momentary'], ['fail', 'Провал', 'momentary']];
+const f1 = v => (v < 0 ? '−' : '') + num(Math.abs(v).toFixed(1));
+function loudCard(root) {
+  const el = document.createElement('section'); el.className = 'card wide';
+  el.innerHTML = `<header><h2>Громкость</h2><button class="btn" id="align">Выровнять по ориентирам</button><button class="btn main" id="measure">Измерить</button></header>
+    <p class="note">Громкость в LUFS — как её слышит ухо, а не по размаху волны. Стандарта для браузерных игр нет; для сравнения:
+    музыка в стримингах около −14, телевидение −23, для портативных игр советуют около −18 в среднем по игре.
+    «Выровнять» ставит общую громкость на 100 % и подгоняет громкость каждого звука под ориентир. Потом послушайте «Сценки» и поправьте на слух.</p>
+    <div class="tbl"><table class="loud"><thead><tr><th>Звук</th><th>Сейчас, LUFS</th><th>Ориентир</th><th>Разница</th><th>Пик, dBFS</th></tr></thead><tbody></tbody></table></div>
+    <p class="stats" id="loudNote">Нажмите «Измерить».</p>`;
+  root.appendChild(el);
+  $('#measure').addEventListener('click', showLoud);
+  $('#align').addEventListener('click', align);
+}
+async function showLoud() {
+  const note = $('#loudNote'); note.textContent = 'Меряю…';
+  const m = await Sound.measure();
+  if (!m) { note.textContent = 'Браузер не умеет звук.'; return null; }
+  const tb = $('.loud tbody'); tb.innerHTML = '';
+  for (const [id, name, kind] of LOUD_ROWS) {
+    const v = m[id][kind], d = v - TARGETS[id], ok = Math.abs(d) <= 1, tr = document.createElement('tr');
+    tr.innerHTML = `<td>${name}</td><td>${f1(v)}</td><td>${f1(TARGETS[id])}</td>` +
+      `<td class="${ok ? 'ok' : 'off'}">${ok ? 'в норме' : (d > 0 ? 'громче на ' : 'тише на ') + f1(Math.abs(d)) + ' дБ'}</td>` +
+      `<td class="${m[id].peak > -1 ? 'off' : ''}">${f1(m[id].peak)}</td>`;
+    tb.appendChild(tr);
+  }
+  note.textContent = 'Музыка — средняя громкость по всей петле, звуки — самый громкий момент (окно 0,4 с). Пик выше −1 dBFS — риск хрипа в динамике телефона.';
+  return m;
+}
+async function align() {
+  Sound.unlock();
+  Sound.cfg.master = 1; $('#master').value = 1; Sound.setVolumes();
+  const m = await showLoud();
+  if (!m) return;
+  const short = [];
+  for (const [id, name, kind] of LOUD_ROWS) {
+    const max = id === 'music' ? 1 : 1.5;
+    let v = Sound.cfg[id].volume * Math.pow(10, (TARGETS[id] - m[id][kind]) / 20);
+    if (v > max) { short.push(name); v = max; }
+    Sound.cfg[id].volume = Math.round(v * 100) / 100;
+  }
+  save(); Sound.setVolumes(); syncers.forEach(f => f());
+  await showLoud();
+  if (short.length) $('#loudNote').textContent += ' Не хватило запаса громкости: ' + short.join(', ') + ' — скажите, подниму в самом звуке.';
+}
+
+let musicBtn, statsEl, rebuildTimer = 0;
+function musicChanged(kind, key) {
+  if (key === 'volume') { Sound.setVolumes(); return; }
+  clearTimeout(rebuildTimer);
+  if (statsEl) statsEl.textContent = 'Пересобираю…';
+  rebuildTimer = setTimeout(() => { Sound.invalidate(); if (!Sound.playing && statsEl) statsEl.textContent = 'Соберётся при запуске.'; }, 350);
+}
+async function toggleMusic() {
+  Sound.unlock();
+  if (Sound.playing) { Sound.stopMusic(); syncMusicBtn(); return; }
+  if (!Sound.stats || statsEl.textContent.startsWith('Соберётся')) statsEl.textContent = 'Собираю…';
+  const p = Sound.startMusic(); syncMusicBtn(); await p;
+}
+function syncMusicBtn() { musicBtn.textContent = Sound.playing ? '■ Стоп' : '▶ Играть'; musicBtn.classList.toggle('on', Sound.playing); }
+Sound.onStats = s => {
+  statsEl.textContent = `Собрано за ${s.ms} мс · петля ${num(s.len.toFixed(1))} с · громкость при 100 % — −18 LUFS` +
+    (s.comp.max ? ` · компрессор прижимает в среднем на ${num(s.comp.avg.toFixed(1))} дБ, самое большее на ${num(s.comp.max.toFixed(1))} дБ` : '') +
+    (s.clip > 0.5 ? ` · пики срезаны на ${num(s.clip.toFixed(1))} дБ` : '') + '. ' +
+    'На слабом телефоне сборка в 5–10 раз дольше, она идёт один раз после загрузки.';
+};
+
+function buildCards() {
+  const root = $('#cards');
+  for (const card of CARDS) {
+    const el = document.createElement('section'); el.className = 'card' + (card.wide ? ' wide' : '');
+    el.innerHTML = `<header><h2>${card.title}</h2><button class="btn main"></button></header><p class="note">${card.note}</p><div class="seg"></div><div class="sliders"></div>`;
+    const btn = el.querySelector('header .btn'), seg = el.querySelector('.seg'), sl = el.querySelector('.sliders');
+    const isMusic = card.id === 'music', vkey = card.vkey || 'v';
+    if (isMusic) {
+      musicBtn = btn; btn.addEventListener('click', toggleMusic); syncMusicBtn();
+      statsEl = document.createElement('p'); statsEl.className = 'stats'; statsEl.textContent = 'Соберётся при запуске.';
+      el.insertBefore(statsEl, seg);
+    } else {
+      btn.textContent = '▶ Послушать';
+      btn.addEventListener('click', () => Sound.play(card.id));
+    }
+    card.variants.forEach((name, i) => {
+      const b = document.createElement('button'); b.textContent = name;
+      b.classList.toggle('sel', Sound.cfg[card.id][vkey] === i);
+      b.addEventListener('click', () => {
+        Sound.unlock(); Sound.cfg[card.id][vkey] = i; save();
+        seg.querySelectorAll('button').forEach((x, j) => x.classList.toggle('sel', j === i));
+        if (isMusic) musicChanged('change', vkey); else Sound.play(card.id);
+      });
+      seg.appendChild(b);
+    });
+    for (const [key, label, min, max, step, fmt] of card.sliders) {
+      sl.appendChild(slider(card.id, key, label, min, max, step, fmt, isMusic ? musicChanged : (kind) => { if (kind === 'change') Sound.play(card.id); }));
+    }
+    if (isMusic) sl.appendChild(slider(null, 'duck', 'Приседание на победе и провале', 0, 1, 0.05, pct));
+    root.appendChild(el);
+  }
+  loudCard(root);
+  const box = document.createElement('section'); box.className = 'card wide';
+  box.innerHTML = `<header><h2>Настройки</h2></header>
+    <p class="note">Всё, что выбрано выше, хранится в этом браузере. «Сохранить» записывает настройки в <b>tools/sound.json</b> в папке игры — оттуда я их и прочитаю. В первый раз браузер спросит папку: выберите WindGame.</p>
+    <textarea id="json" readonly></textarea>
+    <div class="row"><button class="btn main" id="save">Сохранить</button><button class="btn" id="copy">Скопировать</button><button class="btn" id="reset">Сбросить всё</button><span class="note" id="copied"></span></div>`;
+  root.appendChild(box);
+  $('#json').value = dump();
+  $('#save').addEventListener('click', saveFile);
+  $('#copy').addEventListener('click', async () => {
+    const t = $('#json');
+    try { await navigator.clipboard.writeText(t.value); } catch (e) { t.select(); document.execCommand('copy'); }
+    $('#copied').textContent = 'Скопировано'; setTimeout(() => $('#copied').textContent = '', 1500);
+  });
+  let armed = 0;
+  $('#reset').addEventListener('click', e => {
+    if (!armed) { e.target.textContent = 'Точно сбросить?'; armed = setTimeout(() => { armed = 0; e.target.textContent = 'Сбросить всё'; }, 3000); return; }
+    try { localStorage.removeItem(STORE); } catch (err) {}
+    location.reload();
+  });
+}
+
+// ---------- запись в tools/sound.json (File System Access, Chrome/Edge) ----------
+// Папку выбирают один раз; доступ хранится в той же базе, что у Тексты.html, поэтому папка может быть уже выбрана.
+let dirHandle = null;
+function idb(mode, fn) {
+  return new Promise((ok, fail) => {
+    const r = indexedDB.open('poryv-texts', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('h');
+    r.onerror = () => fail(r.error);
+    r.onsuccess = () => { const tx = r.result.transaction('h', mode); const q = fn(tx.objectStore('h')); tx.oncomplete = () => ok(q.result); tx.onerror = () => fail(tx.error); };
+  });
+}
+idb('readonly', s => s.get('dir')).then(h => { dirHandle = h || null; }).catch(() => {});
+async function saveFile() {
+  const say = t => { $('#copied').textContent = t; };
+  if (!window.showDirectoryPicker) { say('Этот браузер не умеет писать файлы — откройте страницу в Chrome или Edge или нажмите «Скопировать».'); return; }
+  try {
+    // окно выбора и вопрос о доступе браузер показывает только сразу после клика — поэтому они первыми
+    let h = dirHandle;
+    if (h && await h.requestPermission({ mode: 'readwrite' }) !== 'granted') h = null;
+    if (!h) h = await showDirectoryPicker({ id: 'poryv', mode: 'readwrite' });
+    try { await h.getFileHandle('Порыв.html'); } catch (e) { say('В этой папке нет Порыв.html — выберите папку игры WindGame.'); return; }
+    dirHandle = h;
+    try { await idb('readwrite', s => s.put(h, 'dir')); } catch (e) {}
+    const f = await (await h.getDirectoryHandle('tools', { create: true })).getFileHandle('sound.json', { create: true });
+    const w = await f.createWritable(); await w.write(dump() + '\n'); await w.close();
+    say('Сохранено в tools/sound.json, ' + new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }));
+  } catch (e) {
+    say(e.name === 'AbortError' ? 'Папку не выбрали — ничего не сохранено.' : 'Не сохранилось: ' + e.message);
+  }
+}
+
+function buildBar() {
+  const keys = [['C (до)', 0], ['D (ре)', 2], ['E♭ (ми-бемоль)', 3], ['E (ми)', 4], ['F (фа)', 5], ['G (соль)', -5], ['A (ля)', -3], ['B♭ (си-бемоль)', -2]];
+  const sel = $('#key');
+  keys.forEach(([n, v]) => { const o = document.createElement('option'); o.value = v; o.textContent = n; sel.appendChild(o); });
+  sel.value = Sound.cfg.key;
+  sel.addEventListener('change', () => { Sound.cfg.key = Number(sel.value); save(); musicChanged('change', 'key'); });
+  const room = $('#room'); room.value = Sound.cfg.room;
+  room.addEventListener('input', () => { Sound.cfg.room = Number(room.value); save(); });
+  room.addEventListener('change', () => { Sound.setRoom(); musicChanged('change', 'room'); Sound.play('win'); });
+  const m = $('#master'); m.value = Sound.cfg.master;
+  m.addEventListener('input', () => { Sound.cfg.master = Number(m.value); save(); Sound.setVolumes(); });
+  $('#sceneWin').addEventListener('click', () => scene('win'));
+  $('#sceneFail').addEventListener('click', () => scene('fail'));
+}
+
+// сценка: музыка, несколько нажатий, потом итог — чтобы услышать всё вместе
+async function scene(kind) {
+  Sound.unlock();
+  let lead = 0;
+  if (!Sound.playing) { await Sound.startMusic(); syncMusicBtn(); lead = 1500; }
+  [0, 550, 1000, 1700, 2200].forEach(ms => setTimeout(() => Sound.play('tap'), lead + ms));
+  setTimeout(() => Sound.play(kind), lead + 3400);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.repeat) return;
+  if (e.code === 'Space') { e.preventDefault(); toggleMusic(); return; }
+  const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
+  if (n >= 0) Sound.play(['tap', 'chop', 'win', 'fail'][n]);
+});
+// как в игре: ушли со вкладки — тишина
+document.addEventListener('visibilitychange', () => document.hidden ? Sound.pause() : Sound.resume());
+
+load();
+buildBar();
+buildCards();
+</script>
+</body>
+</html>
